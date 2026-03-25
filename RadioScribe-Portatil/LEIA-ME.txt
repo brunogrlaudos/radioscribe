@@ -1,0 +1,68 @@
+==========================================
+  RadioScribe Pro v3.2 — Versao Portatil
+==========================================
+
+CONTEUDO DA PASTA
+-----------------
+INICIAR.bat              <- CLIQUE AQUI PARA ABRIR
+BACKUP.bat               <- Faz backup do banco de dados
+INSTALAR_AUTOSTART.bat   <- Inicia automatico com o Windows
+REMOVER_AUTOSTART.bat    <- Remove o inicio automatico
+radioscribe-pro.html     <- Aplicacao principal
+radioscribe-server.js    <- Servidor local
+package.json             <- Dependencias Node.js
+dados/                   <- Banco de dados SQLite (backup aqui!)
+  radioscribe.db
+node/                    <- Node.js portatil (criado automaticamente)
+
+
+COMO USAR
+---------
+1. Clique duas vezes em INICIAR.bat
+2. Na primeira vez, pode demorar alguns minutos para instalar
+3. O navegador abrira automaticamente em http://localhost:3131
+4. Mantenha a janela preta aberta enquanto usa
+
+
+PENDRIVE
+--------
+- Copie toda esta pasta para o pendrive
+- Em qualquer PC Windows, clique em INICIAR.bat
+- O Node.js sera baixado automaticamente se necessario
+- O banco de dados fica na pasta dados\
+
+
+NUVEM (OneDrive / Google Drive / Dropbox)
+-----------------------------------------
+- Coloque toda esta pasta dentro da sua pasta sincronizada
+- O banco dados\ sera sincronizado automaticamente
+- Em cada computador, execute INSTALAR_AUTOSTART.bat
+  para iniciar automatico (uma vez por maquina)
+- ATENCAO: nao use em dois PCs ao mesmo tempo
+  (pode corromper o banco de dados)
+
+
+BACKUP
+------
+- Clique em BACKUP.bat para salvar uma copia do banco
+- Os backups ficam em dados\backups\
+- Recomendado: fazer backup semanal
+
+
+PORTA DO SERVIDOR
+-----------------
+O servidor roda na porta 3131.
+Acesse sempre em: http://localhost:3131
+
+Se a porta ja estiver em uso, edite radioscribe-server.js
+e mude a linha: const PORT = 3131;
+
+
+SUPORTE A IA (Revisao e Conclusao)
+-----------------------------------
+Configure sua chave de API em Gerenciar > IA:
+- Groq (recomendado, gratuito): console.groq.com/keys
+- Gemini (gratuito com cota): aistudio.google.com/app/apikey
+- Anthropic Claude (pago): console.anthropic.com
+
+==========================================
