@@ -1,0 +1,9 @@
+{
+  "name": "radioscribe-pro",
+  "version": "3.2.0",
+  "description": "RadioScribe Pro - Ditado médico inteligente",
+  "main": "radioscribe-server.js",
+  "dependencies": {
+    "better-sqlite3": "^11.0.0"
+  }
+}
