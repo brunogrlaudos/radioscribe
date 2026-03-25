@@ -1,0 +1,74 @@
+PUBLICAR RADIOSCRIBE NA NUVEM (GitHub Pages)
+============================================
+Acesso em qualquer Chrome, sem instalar nada.
+URL fixa tipo: https://seunome.github.io/radioscribe
+
+
+PASSO A PASSO (5 minutos)
+--------------------------
+
+1. Crie uma conta gratuita em:
+   https://github.com/signup
+
+2. Crie um repositório novo:
+   - Clique em "New repository"
+   - Nome: radioscribe
+   - Marque "Public"
+   - Clique "Create repository"
+
+3. Faça upload do arquivo:
+   - Clique em "uploading an existing file"
+   - Arraste o arquivo radioscribe-standalone.html
+   - RENOMEIE para: index.html
+   - Clique "Commit changes"
+
+4. Ative o GitHub Pages:
+   - Va em Settings > Pages
+   - Source: "Deploy from a branch"
+   - Branch: main / (root)
+   - Clique Save
+
+5. Aguarde 2 minutos e acesse:
+   https://seunome.github.io/radioscribe
+
+
+ONDE OS DADOS FICAM
+--------------------
+- Formulas e frases: localStorage do Chrome de cada PC
+- Rascunho do laudo: localStorage (auto-save a cada 4s)
+- Configuracao de IA: localStorage
+
+IMPORTANTE: localStorage e por PC/navegador.
+Para compartilhar formulas entre PCs, use
+"Salvar HTML com dados" e re-publique no GitHub.
+
+
+PARA ATUALIZAR O RADIOSCRIBE
+------------------------------
+1. Baixe a nova versao radioscribe-standalone.html
+2. Va no GitHub > seu repositorio
+3. Clique no arquivo index.html
+4. Clique no icone de lapis (editar)
+5. Clique "..." > "Delete file" ou substitua o conteudo
+6. Melhor: arraste o novo arquivo e confirme
+
+
+ALTERNATIVAS AO GITHUB PAGES
+------------------------------
+- Cloudflare Pages: https://pages.cloudflare.com
+  (mais rapido, tambem gratuito)
+  
+- Netlify: https://app.netlify.com
+  (arraste a pasta, URL imediata)
+
+Em todos os casos: so upload do index.html.
+
+
+SEGURANCA
+----------
+O arquivo nao envia dados para nenhum servidor externo,
+exceto quando voce usa IA (Groq/Gemini) para revisao.
+Suas formulas e laudos ficam so no seu navegador.
+
+A chave de API fica salva no localStorage do Chrome
+(nao aparece no codigo publicado no GitHub).
