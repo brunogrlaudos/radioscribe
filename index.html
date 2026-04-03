@@ -1,0 +1,2549 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RadioScribe Pro v3.2 Standalone</title>
+    
+    
+    <style>
+        :root {
+            --bg: #0a0e1a;
+            --panel: #0f1525;
+            --panel2: #141b2d;
+            --border: #1e2d4a;
+            --blue: #3b82f6;
+            --blue-glow: rgba(59,130,246,0.12);
+            --green: #10b981;
+            --red: #ef4444;
+            --amber: #f59e0b;
+            --purple: #a855f7;
+            --text: #e2e8f0;
+            --muted: #64748b;
+            --accent: #38bdf8;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+            padding: 20px;
+            background-image:
+                radial-gradient(ellipse at 20% 10%, rgba(59,130,246,0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 90%, rgba(16,185,129,0.04) 0%, transparent 50%);
+        }
+        .app-grid {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 210px 1fr 360px;
+            grid-template-rows: auto 1fr;
+            gap: 14px;
+            height: calc(100vh - 40px);
+        }
+        .header {
+            grid-column: 1/-1;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 20px;
+            background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+        }
+        .logo h1 { font-size: 1.35rem; font-weight: 800; }
+        .logo h1 span { color: var(--accent); }
+        .logo p { color: var(--muted); font-size: .72rem; margin-top: 1px; }
+        #status-badge {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: .62rem; font-weight: 700; padding: 4px 12px; border-radius: 20px;
+            background: var(--panel2); border: 1px solid var(--border); letter-spacing: 2px; transition: all .3s;
+        }
+        #status-badge.live { background: rgba(239,68,68,.15); border-color: var(--red); color: var(--red); animation: blink 1s infinite; }
+        @keyframes blink { 50%{opacity:.6} }
+
+        .left-panel { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+        .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 13px; }
+        .card-title { font-size: .58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 3px; color: var(--accent); margin-bottom: 9px; }
+        .shortcut-item { display: flex; align-items: flex-start; gap: 7px; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: .7rem; color: #94a3b8; }
+        .shortcut-item:last-child { border-bottom: none; }
+        .kbd { font-family: 'Consolas', 'Courier New', monospace; background: var(--panel2); border: 1px solid var(--border); padding: 2px 5px; border-radius: 4px; font-size: .62rem; color: var(--text); white-space: nowrap; flex-shrink: 0; }
+        .tip { border-radius: 10px; padding: 10px 12px; font-size: .7rem; line-height: 1.5; }
+        .tip-blue { background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.2); color: #93c5fd; }
+        .tip-amber { background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.2); color: #fcd34d; }
+
+        .center-panel { display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+
+        /* Editor base */
+        #editor {
+            flex: 1; background: #fff; color: #1e293b;
+            padding: 26px 30px; border-radius: 12px; border: 2px solid transparent; outline: none;
+            font-family: 'Segoe UI', system-ui, sans-serif; font-size: 1rem; line-height: 1.9; overflow-y: auto;
+            transition: border-color .2s, background .3s, color .3s;
+            box-shadow: 0 20px 60px rgba(0,0,0,.4); min-height: 0;
+        }
+        #editor:empty:before { content: attr(placeholder); color: #94a3b8; }
+        #editor:focus { border-color: var(--blue); }
+        #editor.recording { border-color: var(--red); }
+
+        /* Sepia mode */
+        #editor.sepia { background: #f5f0e8; color: #2c2416; }
+        #editor.sepia:focus { border-color: #b8860b; }
+        #editor.sepia.recording { border-color: var(--red); }
+
+        /* Next-field highlight */
+        .field-highlight {
+            background: rgba(59,130,246,.18); border-radius: 3px;
+            outline: 2px solid var(--blue); cursor: pointer;
+        }
+
+        /* Editor toolbar */
+        .editor-toolbar {
+            display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+        }
+        .toolbar-btn {
+            border: none; background: var(--panel2); border: 1px solid var(--border);
+            color: var(--muted); font-family: 'Segoe UI', system-ui, sans-serif; font-size: .65rem; font-weight: 700;
+            padding: 5px 10px; border-radius: 7px; cursor: pointer; transition: all .15s;
+            display: flex; align-items: center; gap: 5px; white-space: nowrap;
+        }
+        .toolbar-btn:hover { color: var(--text); border-color: var(--accent); }
+        .toolbar-btn.active { background: rgba(245,158,11,.12); color: var(--amber); border-color: rgba(245,158,11,.4); }
+        .toolbar-btn.conclude-btn { background: rgba(168,85,247,.1); color: var(--purple); border-color: rgba(168,85,247,.3); }
+        .toolbar-btn.conclude-btn:hover { background: rgba(168,85,247,.2); }
+        .toolbar-btn.conclude-btn.loading { opacity:.7; cursor:wait; pointer-events:none; }
+
+        /* Autosave indicator */
+        .autosave-indicator {
+            margin-left: auto; font-size: .62rem; color: var(--muted);
+            display: flex; align-items: center; gap: 5px; font-family: 'Consolas', 'Courier New', monospace;
+        }
+        .autosave-dot {
+            width: 7px; height: 7px; border-radius: 50%; background: var(--muted); transition: background .3s;
+        }
+        .autosave-dot.saved { background: var(--green); }
+        .autosave-dot.saving { background: var(--amber); animation: blink .6s infinite; }
+
+        /* Recover banner */
+        .recover-banner {
+            display: none; background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.35);
+            border-radius: 10px; padding: 10px 14px; font-size: .78rem; color: #fcd34d;
+            align-items: center; gap: 10px; flex-shrink: 0;
+        }
+        .recover-banner.show { display: flex; }
+        .recover-banner span { flex: 1; }
+
+        .controls { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 9px; }
+        .btn {
+            border: none; font-family: 'Segoe UI', system-ui, sans-serif; font-weight: 700;
+            font-size: .78rem; padding: 13px 10px; border-radius: 10px; cursor: pointer;
+            transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        #btn-toggle { background: var(--blue); color: #fff; }
+        #btn-toggle:hover { background: #2563eb; transform: translateY(-1px); }
+        #btn-toggle.recording { background: var(--red); animation: pulse-btn 1.5s infinite; }
+        #btn-toggle.whisper-recording { background: #7c3aed; animation: pulse-btn 1.5s infinite; }
+        #btn-toggle.transcribing { background: var(--amber); opacity:.85; cursor:wait; pointer-events:none; }
+        @keyframes pulse-btn { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)} 50%{box-shadow:0 0 0 8px rgba(239,68,68,0)} }
+
+        /* Whisper mode toggle in toolbar */
+        .whisper-badge {
+            font-family:'Consolas','Courier New',monospace; font-size:.6rem; font-weight:700;
+            padding:3px 8px; border-radius:20px; letter-spacing:1px; cursor:pointer;
+            border:1px solid var(--border); transition:all .2s; white-space:nowrap;
+        }
+        .whisper-badge.off { background:var(--panel2); color:var(--muted); }
+        .whisper-badge.on  { background:rgba(124,58,237,.15); border-color:#7c3aed; color:#c4b5fd; }
+
+        /* Volume meter */
+        .vol-meter {
+            display:none; align-items:center; gap:2px; height:18px;
+        }
+        .vol-meter.show { display:flex; }
+        .vol-bar {
+            width:3px; border-radius:2px; background:var(--red);
+            transition:height .08s ease; min-height:3px;
+        }
+        #btn-cut { background: var(--green); color: #fff; }
+        #btn-cut:hover { background: #059669; transform: translateY(-1px); }
+        #btn-copy { background: #0891b2; color: #fff; }
+        #btn-copy:hover { background: #0e7490; transform: translateY(-1px); }
+        #btn-review { background: var(--purple); color: #fff; position: relative; overflow: hidden; }
+        #btn-review:hover { background: #9333ea; transform: translateY(-1px); }
+        #btn-review.loading { opacity: .75; cursor: wait; pointer-events: none; }
+        #btn-review .spin { display:none; width:13px; height:13px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; flex-shrink:0; }
+        #btn-review.loading .spin { display:block; }
+        #btn-review.loading .btn-review-label { display:none; }
+        @keyframes spin { to{transform:rotate(360deg)} }
+        #btn-clear { background: var(--panel2); color: var(--text); border: 1px solid var(--border); }
+        #btn-clear:hover { background: var(--panel); }
+
+        /* Review panel */
+        .review-panel { background: var(--panel); border: 1px solid rgba(168,85,247,.4); border-radius: 12px; padding: 14px; flex-shrink: 0; max-height: 230px; overflow-y: auto; display: none; }
+        .review-panel.show { display: block; }
+        .review-panel-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+        .review-panel-title { font-size:.6rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--purple); }
+        .review-close { background:none; border:none; cursor:pointer; color:var(--muted); font-size:16px; line-height:1; padding:0 2px; }
+        .review-close:hover { color:var(--text); }
+        .review-diff { font-size:.85rem; line-height:1.9; color:#1e293b; background:#fff; padding:14px 18px; border-radius:8px; }
+        .review-diff ins { background:rgba(16,185,129,.25); color:#065f46; text-decoration:none; border-radius:3px; padding:0 2px; font-weight:600; }
+        .review-diff del { background:rgba(239,68,68,.15); color:#991b1b; text-decoration:line-through; border-radius:3px; padding:0 2px; }
+        .review-actions { display:flex; gap:8px; margin-top:10px; }
+        .review-note { font-size:.67rem; color:var(--muted); margin-top:7px; line-height:1.5; }
+
+        .right-panel {
+            display: flex; flex-direction: column;
+            background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+        }
+        .right-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .tab-btn {
+            flex: 1; padding: 9px 4px; border: none; background: transparent; color: var(--muted);
+            font-family: 'Segoe UI', system-ui, sans-serif; font-size: .58rem; font-weight: 700; letter-spacing: .5px;
+            text-transform: uppercase; cursor: pointer; transition: all .2s; border-bottom: 2px solid transparent;
+        }
+        .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); background: var(--blue-glow); }
+        .tab-content { display: none; flex-direction: column; overflow: hidden; flex: 1; }
+        .tab-content.active { display: flex; }
+
+        .region-selector { padding: 9px 11px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .region-select {
+            width: 100%; background: var(--panel2); border: 1px solid var(--border);
+            color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: .76rem;
+            padding: 7px 9px; border-radius: 8px; outline: none; cursor: pointer;
+        }
+        .region-select:focus { border-color: var(--blue); }
+        .formulas-list { flex: 1; overflow-y: auto; padding: 9px; display: flex; flex-direction: column; gap: 5px; }
+        .formula-item {
+            background: var(--panel2); border: 1px solid var(--border); border-radius: 8px;
+            padding: 9px 11px; cursor: pointer; transition: all .15s; position: relative;
+        }
+        .formula-item:hover { border-color: var(--blue); background: var(--blue-glow); transform: translateX(2px); }
+        .fi-label { font-size: .62rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--accent); margin-bottom: 3px; }
+        .fi-preview { font-size: .7rem; color: #94a3b8; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .fi-actions { position: absolute; right: 7px; top: 7px; display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }
+        .formula-item:hover .fi-actions { opacity: 1; }
+        .fi-btn {
+            width: 22px; height: 22px; border-radius: 5px; border: none;
+            cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center; line-height:1;
+        }
+        .fi-btn-insert { background: var(--blue); color: #fff; }
+        .fi-btn-edit { background: var(--amber); color: #000; }
+        .fi-btn-del { background: var(--red); color: #fff; }
+
+        .phrase-region-header { padding: 9px 11px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .phrase-region-title { font-size: .58rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+        .phrase-region-pills { display: flex; flex-wrap: wrap; gap: 3px; }
+        .region-pill {
+            font-family: 'Segoe UI', system-ui, sans-serif; font-size: .6rem; font-weight: 700;
+            padding: 2px 8px; border-radius: 20px; border: 1px solid var(--border);
+            background: var(--panel2); color: var(--muted); cursor: pointer; transition: all .15s;
+        }
+        .region-pill.active, .region-pill:hover { background: rgba(59,130,246,.15); border-color: var(--blue); color: var(--accent); }
+        .phrases-list { flex: 1; overflow-y: auto; padding: 9px; display: flex; flex-direction: column; gap: 4px; }
+        .phrase-item {
+            background: var(--panel2); border: 1px solid var(--border);
+            border-left: 3px solid var(--amber); border-radius: 0 8px 8px 0;
+            padding: 7px 38px 7px 9px; cursor: pointer; font-size: .7rem;
+            color: #94a3b8; line-height: 1.5; transition: all .15s; position: relative;
+        }
+        .phrase-item:hover { border-left-color: var(--blue); color: var(--text); background: var(--blue-glow); }
+        .phrase-item strong { display: block; font-size: .6rem; color: var(--amber); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 1px; }
+        .phrase-item:hover strong { color: var(--accent); }
+        .pi-actions { position: absolute; right: 6px; top: 6px; display: flex; gap: 3px; opacity: 0; transition: opacity .15s; }
+        .phrase-item:hover .pi-actions { opacity: 1; }
+
+        /* GERENCIAR */
+        .manage-panel { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 12px; }
+        .manage-section-title {
+            font-size: .58rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+            color: var(--purple); margin-bottom: 7px; display: flex; align-items: center; gap: 6px;
+        }
+        .manage-section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+        .form-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 7px; }
+        .form-label { font-size: .6rem; font-weight: 700; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+        .form-input, .form-select, .form-textarea {
+            background: var(--panel2); border: 1px solid var(--border);
+            color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif;
+            font-size: .76rem; padding: 7px 9px; border-radius: 8px; outline: none;
+            transition: border-color .2s; width: 100%;
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--purple); }
+        .form-textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+        .btn-small {
+            border: none; font-family: 'Segoe UI', system-ui, sans-serif; font-weight: 700;
+            font-size: .7rem; padding: 7px 12px; border-radius: 8px;
+            cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: 5px;
+        }
+        .btn-purple { background: var(--purple); color: #fff; }
+        .btn-purple:hover { background: #9333ea; }
+        .btn-green-sm { background: var(--green); color: #fff; }
+        .btn-green-sm:hover { background: #059669; }
+        .btn-cancel { background: var(--panel2); color: var(--muted); border: 1px solid var(--border); }
+        .btn-cancel:hover { color: var(--text); }
+        .manage-form-box { background: rgba(168,85,247,.06); border: 1px solid rgba(168,85,247,.25); border-radius: 10px; padding: 11px; }
+        .manage-form-box.hidden { display: none; }
+        .region-manage-list { display: flex; flex-direction: column; gap: 4px; }
+        .region-manage-item {
+            display: flex; align-items: center; justify-content: space-between;
+            background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: .76rem;
+        }
+        .region-manage-item span { color: var(--text); font-weight: 600; }
+        .rmi-actions { display: flex; gap: 4px; }
+        .rmi-btn { border: none; cursor: pointer; padding: 3px 8px; border-radius: 5px; font-family: 'Segoe UI', system-ui, sans-serif; font-size: .62rem; font-weight: 700; transition: all .15s; }
+        .rmi-edit { background: rgba(245,158,11,.15); color: var(--amber); border: 1px solid rgba(245,158,11,.3); }
+        .rmi-edit:hover { background: rgba(245,158,11,.3); }
+        .rmi-del { background: rgba(239,68,68,.12); color: var(--red); border: 1px solid rgba(239,68,68,.25); }
+        .rmi-del:hover { background: rgba(239,68,68,.25); }
+        .save-bar {
+            display: flex; justify-content: flex-end; gap: 7px;
+            padding: 9px 11px; border-top: 1px solid var(--border); flex-shrink: 0;
+        }
+
+        /* MODAL */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,.75);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000; backdrop-filter: blur(4px);
+            opacity: 0; pointer-events: none; transition: opacity .2s;
+        }
+        .modal-overlay.show { opacity: 1; pointer-events: all; }
+        .modal {
+            background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+            padding: 22px; width: 480px; max-width: 95vw;
+            transform: scale(.95); transition: transform .2s;
+        }
+        .modal-overlay.show .modal { transform: scale(1); }
+        .modal-title { font-size: .9rem; font-weight: 800; margin-bottom: 14px; }
+        .modal-title span { color: var(--purple); }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+        .toast {
+            position: fixed; bottom: 22px; right: 22px;
+            padding: 9px 16px; border-radius: 10px; font-family: 'Segoe UI', system-ui, sans-serif;
+            font-weight: 700; font-size: .8rem; color: #fff;
+            transform: translateY(60px); opacity: 0;
+            transition: all .3s cubic-bezier(.34,1.56,.64,1); z-index: 9999; pointer-events: none;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+    </style>
+</head>
+<body>
+
+<div class="app-grid">
+    <header class="header">
+        <div class="logo">
+            <h1>RadioScribe <span>Pro</span></h1>
+            <p>Controle de ditado médico inteligente · v3.2 &nbsp;✦&nbsp; Standalone</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+            <div id="db-badge" style="font-family:'Consolas','Courier New',monospace;font-size:.6rem;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(100,116,139,.15);border:1px solid #475569;color:#94a3b8;letter-spacing:1px;cursor:default;transition:all .3s" title="Verificando banco...">📄 LOCAL</div>
+            <div id="status-badge">STANDBY</div>
+        </div>
+    </header>
+
+    <aside class="left-panel">
+        <div class="card">
+            <div class="card-title">Comandos de Voz</div>
+            <div class="shortcut-item"><span class="kbd">ponto</span> insere .</div>
+            <div class="shortcut-item"><span class="kbd">vírgula</span> insere ,</div>
+            <div class="shortcut-item"><span class="kbd">interrogação</span> insere ?</div>
+            <div class="shortcut-item"><span class="kbd">exclamação</span> insere !</div>
+            <div class="shortcut-item"><span class="kbd">dois pontos</span> insere :</div>
+            <div class="shortcut-item"><span class="kbd">ponto e vírgula</span> insere ;</div>
+            <div class="shortcut-item"><span class="kbd">reticências</span> insere ...</div>
+            <div class="shortcut-item"><span class="kbd">hífen</span> insere -</div>
+            <div class="shortcut-item"><span class="kbd">travessão</span> insere —</div>
+            <div class="shortcut-item"><span class="kbd">abre parêntese</span> insere (</div>
+            <div class="shortcut-item"><span class="kbd">fecha parêntese</span> insere )</div>
+            <div class="shortcut-item"><span class="kbd">abre aspas</span> insere "</div>
+            <div class="shortcut-item"><span class="kbd">fecha aspas</span> insere "</div>
+            <div class="shortcut-item"><span class="kbd">nova linha</span> pula linha</div>
+            <div class="shortcut-item"><span class="kbd">parágrafo</span> novo §</div>
+            <div class="shortcut-item"><span class="kbd">apagar</span> apaga último trecho</div>
+            <div class="shortcut-item"><span class="kbd">apagar palavra</span> apaga última palavra</div>
+            <div class="shortcut-item"><span class="kbd">próximo campo</span> pula para ___</div>
+            <div class="shortcut-item"><span class="kbd">conclusão normal</span> conclusão padrão</div>
+        </div>
+        <div class="tip tip-blue">💡 Clique em qualquer fórmula ou frase para inserir no cursor.</div>
+        <div class="tip tip-amber">✂️ <strong>"Cortar p/ Próximo"</strong> copia o texto, limpa e reinicia.</div>
+        <div id="tip-db" class="tip" style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2);color:#6ee7b7;display:none">
+            🗄️ <strong>Banco conectado.</strong> Laudos salvos automaticamente. Histórico em ⚙️ Gerenciar.
+        </div>
+    </aside>
+
+    <main class="center-panel">
+
+        <!-- Recovery banner -->
+        <div class="recover-banner" id="recover-banner">
+            <span>💾 Existe um laudo salvo automaticamente. Deseja recuperá-lo?</span>
+            <button class="btn-small btn-green-sm" onclick="recoverDraft()">Recuperar</button>
+            <button class="btn-small btn-cancel" onclick="dismissRecover()">Descartar</button>
+        </div>
+
+        <!-- Editor toolbar -->
+        <div class="editor-toolbar">
+            <button class="toolbar-btn" id="btn-sepia" onclick="toggleSepia()" title="Modo sépia — menos cansaço visual">🌙 Sépia</button>
+            <button class="toolbar-btn" id="btn-next-field" onclick="jumpNextField()" title="Pular para o próximo campo ___  (Tab)">⏭ Próximo ___</button>
+            <button class="toolbar-btn conclude-btn" id="btn-conclude" onclick="generateConclusion()" title="Gerar Conclusão com IA">
+                <span class="conclude-label">✦ Gerar Conclusão</span>
+                <span class="spin" style="display:none;width:11px;height:11px;border:2px solid rgba(168,85,247,.3);border-top-color:var(--purple);border-radius:50%;animation:spin .7s linear infinite"></span>
+            </button>
+            <!-- Whisper mode toggle -->
+            <div class="whisper-badge off" id="whisper-badge" onclick="toggleWhisperMode()" title="Ativar reconhecimento via Groq Whisper (muito mais preciso para termos médicos)">
+                🎙 WHISPER
+            </div>
+            <!-- Volume meter (visível durante gravação Whisper) -->
+            <div class="vol-meter" id="vol-meter">
+                <div class="vol-bar" id="vb1" style="height:4px"></div>
+                <div class="vol-bar" id="vb2" style="height:8px"></div>
+                <div class="vol-bar" id="vb3" style="height:14px"></div>
+                <div class="vol-bar" id="vb4" style="height:8px"></div>
+                <div class="vol-bar" id="vb5" style="height:4px"></div>
+            </div>
+            <div class="autosave-indicator">
+                <div class="autosave-dot" id="autosave-dot"></div>
+                <span id="autosave-label">—</span>
+            </div>
+        </div>
+
+        <div id="editor" contenteditable="true" placeholder="Inicie o ditado ou clique aqui para digitar..."></div>
+
+        <!-- Review diff panel -->
+        <div class="review-panel" id="review-panel">
+            <div class="review-panel-header">
+                <div class="review-panel-title" id="review-panel-title">✦ Revisão Gramatical — Sugestões</div>
+                <button class="review-close" onclick="closeReview()" title="Fechar">✕</button>
+            </div>
+            <div class="review-diff" id="review-diff"></div>
+            <div class="review-actions">
+                <button class="btn-small btn-green-sm" onclick="applyReview()">✓ Aplicar</button>
+                <button class="btn-small btn-cancel" onclick="closeReview()">Descartar</button>
+            </div>
+            <div class="review-note" id="review-note"></div>
+        </div>
+
+        <div class="controls">
+            <button id="btn-toggle" class="btn"><span id="icon">🎙️</span> <span id="btn-text">Iniciar Ditado</span></button>
+            <button id="btn-cut" class="btn">✂️ Cortar</button>
+            <button id="btn-copy" class="btn">📋 Copiar</button>
+            <button id="btn-review" class="btn"><span class="btn-review-label">✦ Revisar</span><span class="spin"></span></button>
+            <button id="btn-clear" class="btn">🗑️ Limpar</button>
+        </div>
+    </main>
+
+    <aside class="right-panel">
+        <div class="right-tabs">
+            <button class="tab-btn active" data-tab="formulas">📋 Fórmulas</button>
+            <button class="tab-btn" data-tab="alternativas">🔄 Alternativas</button>
+            <button class="tab-btn" data-tab="gerenciar">⚙️ Gerenciar</button>
+        </div>
+
+        <!-- FÓRMULAS -->
+        <div class="tab-content active" id="tab-formulas">
+            <div class="region-selector">
+                <select class="region-select" id="formula-region-select"></select>
+            </div>
+            <div class="formulas-list" id="formulas-list"></div>
+        </div>
+
+        <!-- ALTERNATIVAS -->
+        <div class="tab-content" id="tab-alternativas">
+            <div class="phrase-region-header">
+                <div class="phrase-region-title">Filtrar por região</div>
+                <div class="phrase-region-pills" id="phrase-pills"></div>
+            </div>
+            <div class="phrases-list" id="phrases-list"></div>
+        </div>
+
+        <!-- GERENCIAR -->
+        <div class="tab-content" id="tab-gerenciar">
+            <div class="manage-panel">
+
+                <div>
+                    <div class="manage-section-title">Regiões de Fórmulas</div>
+                    <div class="region-manage-list" id="region-manage-list"></div>
+                    <div style="margin-top:8px"><button class="btn-small btn-purple" onclick="showAddRegionForm()">+ Nova Região</button></div>
+                    <div class="manage-form-box hidden" id="add-region-form" style="margin-top:8px">
+                        <div class="form-group">
+                            <div class="form-label">Nome da Região</div>
+                            <input class="form-input" id="new-region-name" placeholder="Ex: Neurológico (RM)" />
+                        </div>
+                        <div style="display:flex;gap:6px">
+                            <button class="btn-small btn-green-sm" onclick="addRegion()">✓ Adicionar</button>
+                            <button class="btn-small btn-cancel" onclick="hideAddRegionForm()">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="manage-section-title">Fórmulas de Laudo</div>
+                    <div class="form-group">
+                        <div class="form-label">Região</div>
+                        <select class="form-select" id="manage-formula-region"></select>
+                    </div>
+                    <div id="manage-formulas-list" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px"></div>
+                    <button class="btn-small btn-purple" onclick="showAddFormulaForm()">+ Nova Fórmula</button>
+                    <div class="manage-form-box hidden" id="add-formula-form" style="margin-top:8px">
+                        <div class="form-group">
+                            <div class="form-label">Título / Label</div>
+                            <input class="form-input" id="new-formula-label" placeholder="Ex: Fígado Normal" />
+                        </div>
+                        <div class="form-group">
+                            <div class="form-label">Texto do Laudo</div>
+                            <textarea class="form-textarea" id="new-formula-text" placeholder="Texto completo..."></textarea>
+                        </div>
+                        <div style="display:flex;gap:6px">
+                            <button class="btn-small btn-green-sm" onclick="saveNewFormula()">✓ Salvar</button>
+                            <button class="btn-small btn-cancel" onclick="hideAddFormulaForm()">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="manage-section-title">Regiões de Frases Alt.</div>
+                    <div class="region-manage-list" id="phrase-region-manage-list"></div>
+                    <div style="margin-top:8px"><button class="btn-small btn-purple" onclick="showAddPhraseRegionForm()">+ Nova Região</button></div>
+                    <div class="manage-form-box hidden" id="add-phrase-region-form" style="margin-top:8px">
+                        <div class="form-group">
+                            <div class="form-label">Nome da Região</div>
+                            <input class="form-input" id="new-phrase-region-name" placeholder="Ex: Mama" />
+                        </div>
+                        <div style="display:flex;gap:6px">
+                            <button class="btn-small btn-green-sm" onclick="addPhraseRegion()">✓ Adicionar</button>
+                            <button class="btn-small btn-cancel" onclick="hideAddPhraseRegionForm()">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="manage-section-title">Frases Alternativas</div>
+                    <div class="form-group">
+                        <div class="form-label">Região</div>
+                        <select class="form-select" id="manage-phrase-region"></select>
+                    </div>
+                    <div id="manage-phrases-list" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px"></div>
+                    <button class="btn-small btn-purple" onclick="showAddPhraseForm()">+ Nova Frase</button>
+                    <div class="manage-form-box hidden" id="add-phrase-form" style="margin-top:8px">
+                        <div class="form-group">
+                            <div class="form-label">Categoria</div>
+                            <input class="form-input" id="new-phrase-cat" placeholder="Ex: Fígado" />
+                        </div>
+                        <div class="form-group">
+                            <div class="form-label">Frase</div>
+                            <textarea class="form-textarea" id="new-phrase-text" placeholder="Texto da frase alternativa..."></textarea>
+                        </div>
+                        <div style="display:flex;gap:6px">
+                            <button class="btn-small btn-green-sm" onclick="saveNewPhrase()">✓ Salvar</button>
+                            <button class="btn-small btn-cancel" onclick="hideAddPhraseForm()">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="save-bar" style="flex-direction:column;gap:10px;align-items:stretch">
+                <!-- API Key config -->
+                <div style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:11px">
+                    <div class="manage-section-title" style="margin-bottom:8px">🤖 IA — Revisão e Conclusão</div>
+                    <div class="form-group" style="margin-bottom:6px">
+                        <div class="form-label">Provedor de IA</div>
+                        <select class="form-select" id="ai-provider-select" onchange="onProviderChange()">
+                            <option value="groq">⚡ Groq — Llama 3 (gratuito, ultra-rápido) ← Recomendado</option>
+                            <option value="gemini">Google Gemini 2.0 Flash (gratuito, cota limitada)</option>
+                            <option value="anthropic">Anthropic Claude Haiku (pago)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:4px">
+                        <div class="form-label" id="api-key-label">Chave de API (Groq Cloud)</div>
+                        <div style="display:flex;gap:6px">
+                            <input class="form-input" type="password" id="api-key-input"
+                                placeholder="Cole sua chave aqui..."
+                                style="font-family:'Consolas','Courier New',monospace;font-size:.68rem;flex:1" />
+                            <button class="btn-small btn-cancel" onclick="toggleKeyVisibility()" style="padding:0 10px;font-size:14px">👁</button>
+                        </div>
+                    </div>
+                    <div style="font-size:.62rem;color:var(--muted);line-height:1.6" id="api-key-hint">
+                        Gratuito: <a href="https://console.groq.com/keys" target="_blank" style="color:var(--accent)">console.groq.com</a>
+                        — sem limite de cota diária relevante, resposta em ~1 segundo.
+                    </div>
+                </div>
+                <button class="btn-small btn-purple" style="width:100%;justify-content:center" onclick="exportHTML()">💾 Salvar HTML com dados e chave</button>
+                <button class="btn-small btn-green-sm" style="width:100%;justify-content:center" onclick="saveToDB().then(()=>refreshAll())" id="btn-save-db">🗄️ Salvar no Banco SQLite</button>
+
+                <!-- GitHub Sync -->
+                <div style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:11px;margin-top:2px">
+                    <div class="manage-section-title" style="margin-bottom:8px;color:#10b981">☁️ Sincronizar com GitHub</div>
+                    <div style="font-size:.65rem;color:var(--muted);margin-bottom:8px;line-height:1.5">
+                        Salva <strong style="color:var(--text)">chave de API + fórmulas + frases</strong> num Gist secreto do GitHub.<br>
+                        Qualquer PC que abrir a página carrega tudo automaticamente.
+                    </div>
+                    <div class="form-group" style="margin-bottom:6px">
+                        <div class="form-label">GitHub Token (Personal Access Token)</div>
+                        <div style="display:flex;gap:6px">
+                            <input class="form-input" type="password" id="gh-token-input"
+                                placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                                style="font-family:'Consolas','Courier New',monospace;font-size:.68rem;flex:1" />
+                            <button class="btn-small btn-cancel" onclick="toggleGhToken()" style="padding:0 10px;font-size:14px">👁</button>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:6px;margin-top:4px">
+                        <button class="btn-small btn-green-sm" style="flex:1;justify-content:center" onclick="githubSave()">
+                            <span id="gh-save-label">☁️ Salvar na Nuvem</span>
+                            <span id="gh-save-spin" style="display:none;width:11px;height:11px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite"></span>
+                        </button>
+                        <button class="btn-small btn-cancel" style="flex:1;justify-content:center" onclick="githubLoad()">
+                            <span id="gh-load-label">⬇️ Carregar da Nuvem</span>
+                            <span id="gh-load-spin" style="display:none;width:11px;height:11px;border:2px solid rgba(100,116,139,.3);border-top-color:var(--muted);border-radius:50%;animation:spin .7s linear infinite"></span>
+                        </button>
+                    </div>
+                    <div style="font-size:.6rem;color:var(--muted);margin-top:7px;line-height:1.5">
+                        Token gratuito em <a href="https://github.com/settings/tokens/new?scopes=gist&description=RadioScribe" target="_blank" style="color:var(--accent)">github.com/settings/tokens</a> — marque apenas <strong style="color:var(--text)">gist</strong> (não precisa de "repo").<br>
+                        Os dados ficam num Gist secreto — invisível publicamente. O token fica só no seu navegador.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+    <div class="modal">
+        <div class="modal-title" id="modal-title">Editar <span>Item</span></div>
+        <div id="modal-body"></div>
+        <div class="modal-footer">
+            <button class="btn-small btn-cancel" onclick="closeModal()">Cancelar</button>
+            <button class="btn-small btn-green-sm" onclick="saveModal()">✓ Salvar</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── DIFF INLINE (sem CDN, funciona offline) ────────────
+var Diff = (function(){
+    function tokenize(s){ return s.match(/[\w\u00C0-\u024F]+|[^\w\u00C0-\u024F]/g)||[]; }
+    function lcs(a,b){
+        var m=a.length,n=b.length,dp=[];
+        for(var i=0;i<=m;i++){dp[i]=[];for(var j=0;j<=n;j++)dp[i][j]=0;}
+        for(var i=1;i<=m;i++)for(var j=1;j<=n;j++)
+            dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]+1:Math.max(dp[i-1][j],dp[i][j-1]);
+        var r=[],i=m,j=n;
+        while(i>0&&j>0){if(a[i-1]===b[j-1]){r.unshift(a[i-1]);i--;j--;}else if(dp[i-1][j]>dp[i][j-1])i--;else j--;}
+        return r;
+    }
+    function diffWords(a,b){
+        var aw=tokenize(a),bw=tokenize(b),common=lcs(aw,bw);
+        var res=[],ai=0,bi=0,li=0;
+        while(ai<aw.length||bi<bw.length){
+            if(li<common.length&&aw[ai]===common[li]&&bw[bi]===common[li]){
+                res.push({value:aw[ai]});ai++;bi++;li++;
+            }else if(bi<bw.length&&(li>=common.length||bw[bi]!==common[li])){
+                res.push({value:bw[bi],added:true});bi++;
+            }else{
+                res.push({value:aw[ai],removed:true});ai++;
+            }
+        }
+        return res;
+    }
+    return {diffWords:diffWords};
+})();
+
+// ── LOCALSTORAGE PERSISTENCE (formulas e alternativas) ─
+const LS_FORMULAS_KEY     = 'rs_formulas_v2';
+const LS_ALTERNATIVAS_KEY = 'rs_alternativas_v2';
+
+function saveToLocalStorage() {
+    try {
+        localStorage.setItem(LS_FORMULAS_KEY, JSON.stringify(formulas));
+        localStorage.setItem(LS_ALTERNATIVAS_KEY, JSON.stringify(alternativas));
+    } catch(e) { console.warn('[RS] localStorage cheio:', e.message); }
+}
+
+function loadFromLocalStorage() {
+    try {
+        const f = localStorage.getItem(LS_FORMULAS_KEY);
+        const a = localStorage.getItem(LS_ALTERNATIVAS_KEY);
+        if (f) { const p=JSON.parse(f); if(Object.keys(p).length>0) formulas=p; }
+        if (a) { const p=JSON.parse(a); if(Object.keys(p).length>0) alternativas=p; }
+        return !!(f||a);
+    } catch(e) { return false; }
+}
+
+
+// ── DADOS PADRÃO ──────────────────────────────────────
+const defaultFormulas = {
+    "Abdome / Pelve": [
+        { label: "TC ABDOME TOTAL - NORMAL SEM CONTRASTE", text: "Detalhe Técnico:\nExame realizado em equipamento helicoidal de multidetectores.\nAquisições realizadas antes e após administração venosa de meio de contraste.\nAquisições realizadas sem administração venosa de meio de contraste.\nNão foi administrado contraste venoso por solicitação do médico assistente.\nO paciente não autorizou a administração de contraste venoso.\nNão foi administrado contraste venoso devido a antecedentes alérgicos.\nNão foi administrado contraste venoso devido à dificuldade de acesso vascular periférico.\nAs alças intestinais foram previamente opacificadas com contraste administrado por via oral.\nForam realizadas reconstruções posteriores no plano axial e reformatações multiplanares com a técnica MPR.\nForam realizadas reconstruções posteriores no plano axial e reformatações multiplanares com a técnica MPR e 3D.\n\nAnálise:\nFígado de dimensões normais, sem alterações do contorno e sem evidências de lesões focais.\nVesícula biliar sem alterações detectáveis a Tomografia Computadorizada.\nVesícula biliar não visualizada (relato de cirurgia prévia).\nNão se observa dilatação das vias biliares intra e/ou extra-hepáticas.\nBaço com textura homogênea.\nPâncreas sem evidências de anormalidades.\nAdrenais anatômicas.\nRins com topografia, forma e dimensões normais.\nAorta de diâmetros normais. Veia cava inferior sem alterações.\nNão há ascite.\nNão detectamos linfonodomegalias no retroperitônio.\nBexiga de paredes lisas e regulares, com conteúdo homogêneo.\nNão observamos massas na pelve detectáveis ao método.\nFossas isquiorretais livres." },
+        { label: "TC ABDOME TOTAL - NORMAL COM CONTRASTE", text: "Detalhe Técnico:\nExame realizado em equipamento helicoidal de multidetectores.\nAquisições realizadas antes e após administração venosa de meio de contraste.\nAquisições realizadas sem administração venosa de meio de contraste.\nNão foi administrado contraste venoso por solicitação do médico assistente.\nO paciente não autorizou a administração de contraste venoso.\nNão foi administrado contraste venoso devido a antecedentes alérgicos.\nNão foi administrado contraste venoso devido à dificuldade de acesso vascular periférico.\nAs alças intestinais foram previamente opacificadas com contraste administrado por via oral.\nForam realizadas reconstruções posteriores no plano axial e reformatações multiplanares com a técnica MPR.\nForam realizadas reconstruções posteriores no plano axial e reformatações multiplanares com a técnica MPR e 3D.\n\nAnálise:\nFígado de dimensões normais, sem alterações do contorno e sem evidências de lesões focais.\nVesícula biliar sem alterações detectáveis a Tomografia Computadorizada.\nVesícula biliar não visualizada (relato de cirurgia prévia).\nNão se observa dilatação das vias biliares intra e/ou extra-hepáticas.\nBaço com textura homogênea.\nPâncreas sem evidências de anormalidades.\nAdrenais anatômicas.\nRins com topografia, forma e dimensões normais, excretando bilateralmente o meio de contraste. Ureteres pérvios.\nAorta de diâmetros normais. Veia cava inferior sem alterações.\nNão há ascite.\nNão detectamos linfonodomegalias no retroperitônio.\nBexiga de paredes lisas e regulares sem falhas de enchimento.\nNão observamos massas na pelve detectáveis ao método.\nFossas isquiorretais livres." },
+        { label: "Fígado Normal", text: "Fígado de dimensões normais, contornos regulares e ecogenicidade homogênea do parênquima. Ausência de lesões focais ou dilatação das vias biliares intra-hepáticas." },
+        { label: "Vesícula Biliar Normal", text: "Vesícula biliar de dimensões normais, com paredes finas e conteúdo anecóico homogêneo. Ausência de cálculos ou pólipos." },
+        { label: "Pâncreas Normal", text: "Pâncreas com contornos regulares, ecogenicidade preservada e ducto pancreático principal de calibre normal." },
+        { label: "Baço Normal", text: "Baço de dimensões normais (maior eixo: ___ cm), com parênquima homogêneo e sem lesões focais." },
+        { label: "Rins Normais", text: "Rins de dimensões normais, com contornos preservados, relação córtico-medular mantida e ausência de dilatação do sistema pielocalicial. Ausência de cálculos ou lesões focais." },
+        { label: "Pelve Feminina Normal", text: "Útero em anteversoflexão, de dimensões normais, com contornos regulares e miométrio homogêneo. Endométrio com espessura compatível com a fase do ciclo. Ovários de morfologia e dimensões normais, sem sinais de lesões anexiais." },
+        { label: "Bexiga Normal", text: "Bexiga com paredes regulares e espessura normal, conteúdo anecóico homogêneo. Ausência de lesões intraluminais." },
+        { label: "Conclusão Abdome Normal", text: "CONCLUSÃO: Exame dentro dos limites da normalidade para o método. Ausência de alterações ecográficas significativas nos órgãos avaliados." }
+    ],
+    "AngioTC": [
+        { label: "AngioTC Crânio", text: "Detalhe técnico:\nExame realizado em equipamento helicoidal de multidetectores.\nAquisições realizadas antes e após administração venosa de meio de contraste.\nForam realizadas reconstruções posteriores no plano axial e reformatações multiplanares com as técnicas MPR, MIP e 3D.\n\nAnálise:\nSifões carotídeos de curso e calibre normais.\nArtérias cerebrais anteriores e médias sem alterações.\nArtérias cerebrais posteriores sem anormalidades.\nOs segmentos intracranianos das artérias vertebrais e a artéria basilar têm aspecto habitual.\nNão há evidência de aneurismas ou de malformações vasculares.\n\nNota: Parênquima cerebral com valores de atenuação dentro dos limites da normalidade.\nAusência de hidrocefalia." },
+        { label: "Doppler Carotídeo Normal", text: "Artérias carótidas comuns, internas e externas bilaterais com calibre, fluxo e espessura íntima-média normais (< 0,9 mm). Ausência de placas ateromatosas ou estenoses significativas." },
+        { label: "Doppler MMII Normal", text: "Veias do sistema venoso profundo dos membros inferiores com calibre normal, paredes compressíveis, fluxo espontâneo e fásico, sem evidências de trombose venosa profunda." },
+        { label: "Placa Ateromatosa", text: "Placa ateromatosa ___ (calcificada / mista / fibrolipídica) na bifurcação carotídea ___, determinando estenose de grau ___ (< 50% / 50-69% / ≥ 70%)." },
+        { label: "Conclusão Doppler Normal", text: "CONCLUSÃO: Exame Doppler sem alterações hemodinamicamente significativas para o método." }
+    ],
+    "Tórax": [
+        { label: "Rx Tórax Normal", text: "Transparência pulmonar preservada bilateralmente.\nSeios costofrênicos livres.\nHilos anatômicos.\nVolume cardíaco de dimensões normais.\nAorta de calibre normal." },
+        { label: "TC Tórax Normal", text: "TOMOGRAFIA COMPUTADORIZADA DE TÓRAX:\nPulmões expandidos, com transparência normal. Ausência de consolidações, nódulos, massas ou derrame pleural. Mediastino centrado, sem linfadenopatias significativas." },
+        { label: "Derrame Pleural", text: "Evidência de derrame pleural à direita / esquerda / bilateral, de pequeno / médio / grande volume, com velamento do seio costofrênico homolateral." },
+        { label: "Conclusão TC Tórax Normal", text: "CONCLUSÃO: Exame de TC de tórax sem alterações significativas para o método." }
+    ],
+    "Cabeça e Pescoço": [
+        { label: "Tireoide Normal (US)", text: "Tireoide de dimensões normais, com lobos simétricos, contornos regulares e ecogenicidade homogênea. Ausência de nódulos, cistos ou calcificações." },
+        { label: "Linfonodos Cervicais", text: "Linfonodos cervicais identificados de morfologia reativa (oval, hilo gorduroso presente), os maiores medindo ___ mm, sem critérios ecográficos de malignidade." },
+        { label: "TC Seios da Face Normal", text: "Seios paranasais com pneumatização normal e ausência de espessamento mucoso ou conteúdo líquido. Complexo ostiomeatal pérvio bilateralmente." },
+        { label: "Conclusão Cervical Normal", text: "CONCLUSÃO: Avaliação ultrassonográfica cervical sem alterações significativas para o método." }
+    ],
+    "Musculoesquelético": [
+        { label: "Ombro Normal (US)", text: "Tendão do supraespinhal com espessura e ecogenicidade preservadas, sem sinais de rotura parcial ou total. Bursa subacromial-subdeltoidea sem distensão." },
+        { label: "Joelho Normal (RM)", text: "Meniscos medial e lateral com morfologia e sinal normais. Ligamentos cruzados anterior e posterior íntegros. Cartilagem articular preservada. Ausência de derrame articular significativo." },
+        { label: "Coluna Lombar Normal", text: "Corpos vertebrais com altura e sinal normais. Discos intervertebrais sem protrusões ou herniações. Canal medular de dimensões adequadas." },
+        { label: "Conclusão Normal", text: "CONCLUSÃO: Exame sem alterações estruturais significativas para o método e faixa etária." }
+    ],
+    "Mama": [
+        { label: "Mama Normal (US)", text: "Mamas simétricas com ecotextura homogênea, predominantemente gordurosa / fibroglandular. Ausência de nódulos, cistos complexos ou imagens suspeitas. BIRADS-US: 1." },
+        { label: "Cisto Simples", text: "Imagem nodular anecóica, de contornos regulares, com reforço acústico posterior, medindo ___ mm, no quadrante ___ da mama ___. Cisto simples. BIRADS-US: 2." },
+        { label: "Mamografia Normal", text: "Mamas de composição predominantemente ___ (ACR: a/b/c/d). Ausência de nódulos, calcificações suspeitas, assimetrias ou distorções arquiteturais. BIRADS: 1." },
+        { label: "Conclusão Mama Normal", text: "CONCLUSÃO: Exame sem alterações para o método. BIRADS: 1 — Exame negativo. Seguimento de rotina conforme protocolo." }
+    ],
+    "Vascular / Doppler": [
+        { label: "Doppler Carotídeo Normal", text: "Artérias carótidas comuns, internas e externas bilaterais com calibre, fluxo e espessura íntima-média normais (< 0,9 mm). Ausência de placas ateromatosas ou estenoses significativas." },
+        { label: "Doppler MMII Normal", text: "Veias do sistema venoso profundo dos membros inferiores com calibre normal, paredes compressíveis, fluxo espontâneo e fásico, sem evidências de trombose venosa profunda." },
+        { label: "Placa Ateromatosa", text: "Placa ateromatosa ___ (calcificada / mista / fibrolipídica) na bifurcação carotídea ___, determinando estenose de grau ___ (< 50% / 50-69% / ≥ 70%)." },
+        { label: "Conclusão Doppler Normal", text: "CONCLUSÃO: Exame Doppler sem alterações hemodinamicamente significativas para o método." }
+    ],
+    "Neurológico (RM)": [
+        { label: "RM Crânio Normal", text: "RESSONÂNCIA MAGNÉTICA DE CRÂNIO:\nParênquima encefálico com morfologia e sinal normais para a faixa etária. Ausência de lesões focais de sinal, restrições à difusão ou efeito de massa. Sistema ventricular de dimensões normais." },
+        { label: "RM Coluna Cervical Normal", text: "Alinhamento vertebral preservado. Medula cervical com calibre e sinal normais, sem compressão ou lesão intrínseca. Discos intervertebrais com altura e sinal preservados." },
+        { label: "Leucoaraiose Grau I", text: "Pequenas hiperintensidades em T2 e FLAIR na substância branca periventricular, compatíveis com leucoaraiose de grau I (Fazekas 1), de provável etiologia microangiopática." },
+        { label: "Conclusão RM Normal", text: "CONCLUSÃO: Ressonância magnética de crânio sem alterações significativas para o método e faixa etária." }
+    ]
+};
+
+const defaultAlternativas = {
+    "Fígado": [
+        { cat: "Esteatose", phrase: "Fígado de dimensões normais, apresentando redução leve e difusa de sua densidade tomográfica ([medida] HU), tornando-se discretamente hipodenso em relação ao parênquima esplênico. Vasos supra-hepáticos e sistema porta com trajeto e calibre preservados.\nImpressão: Esteatose hepática leve (Grau I)." },
+        { cat: "Esteatose", phrase: "Nota-se redução moderada da densidade do parênquima hepático ([medida] HU), nitidamente inferior à densidade do baço. Observa-se maior destaque relativo da vasculatura intra-hepática, sem desvios ou compressões vasculares.\nImpressão: Esteatose hepática moderada (Grau II)." },
+        { cat: "Esteatose", phrase: "Fígado com redução acentuada e global de sua densidade tomográfica ([medida] HU), com inversão do gradiente hepatoesplênico e proeminente visualização dos vasos intra-hepáticos (aspecto de 'vasos brilhantes').\nImpressão: Esteatose hepática acentuada (Grau III)." },
+        { cat: "Esteatose", phrase: "O parênquima hepático apresenta redução difusa da densidade (esteatose), notando-se área de preservação parenquimatosa insular, de contornos geográficos e sem efeito de massa, localizada na [localização: ex: fossa cística / segmento IV]. Tal achado não deve ser confundido com lesão expansiva sólida.\nImpressão: Esteatose hepática associada a área de preservação parenquimatosa insular." },
+        { cat: "Hepatopatia crônica", phrase: "Fígado com dimensões preservadas, apresentando contornos discretamente serrilhados e bordas levemente rombas. Parênquima com textura discretamente heterogênea, sem lesões focais suspeitas. Não há sinais de redistribuição volumétrica ou hipertensão portal evidente.\nImpressão: Sinais compatíveis com hepatopatia crônica inicial." },
+        { cat: "Hepatopatia crônica", phrase: "Fígado com dimensões reduzidas, contornos lobulados e bordas rombas. Redistribuição volumétrica com hipertrofia do lobo caudado e segmento lateral do lobo esquerdo, em detrimento do lobo direito. Parênquima heterogêneo. Veia porta de calibre preservado ([medida] cm).\nImpressão: Alterações morfológicas sugestivas de hepatopatia crônica/cirrose." },
+        { cat: "Hepatopatia crônica", phrase: "Fígado de volume reduzido, contornos francamente irregulares/nodulares e acentuada redistribuição volumétrica. Sinais de hipertensão portal: esplenomegalia (maior eixo [medida] cm), circulação colateral portossistêmica (varizes esofágicas/gástricas/periesplênicas), veia porta com calibre de [medida] cm, ascite de volume [leve/moderado/acentuado] e recanalização da veia umbilical.\nImpressão: Cirrose hepática avançada com sinais de hipertensão portal e ascite." },
+        { cat: "Lesões focais", phrase: "Identifica-se formação nodular hipodensa na fase pré-contraste, medindo [medida] cm, no segmento [número]. Após contraste: realce periférico globuliforme e descontínuo na fase arterial, com preenchimento centrípeto progressivo nas fases subsequentes (aspecto típico de hemangioma).\nImpressão: Hemangioma hepático no segmento [número]." },
+        { cat: "Lesões focais", phrase: "Nota-se formação arredondada hipodensa, contornos regulares e paredes finas, medindo [medida] cm, no segmento [número]. Densidade de água, sem realce após contraste.\nImpressão: Cisto hepático simples no segmento [número]." },
+        { cat: "Lesões focais", phrase: "Formação nodular sólida, medindo [medida] cm, no segmento [número], com realce intenso e homogêneo na fase arterial, exceto por área central linear hipodensa (cicatriz central). Nas fases portal e tardia torna-se isodensa, permanecendo a cicatriz com realce tardio.\nImpressão: Achado compatível com Hiperplasia Nodular Focal (HNF) no segmento [número]." },
+        { cat: "Lesões focais", phrase: "Lesão expansiva sólida, medindo [medida] cm, no segmento [número], caracterizada por hiper-realce arterial intenso e precoce seguido de lavagem rápida (wash-out) na fase portal/tardia, tornando-se hipodensa em relação ao parênquima.\nImpressão: Nódulo hepático com padrão de realce típico para CHC. Sugere-se correlação com LI-RADS." },
+        { cat: "Lesões focais", phrase: "Formação nodular de contornos irregulares, medindo [medida] cm, no segmento [número], com realce periférico em 'alvo' e centro hipodenso, sem preenchimento nas fases tardias. Aspecto sugestivo de lesão secundária.\nImpressão: Nódulo hepático sólido no segmento [número] com características suspeitas para implante secundário." },
+        { cat: "Vias biliares", phrase: "Nota-se presença de imagens com densidade de gás ramificadas no interior das vias biliares intra-hepáticas, compatível com aerobilia. Vias biliares sem sinais de dilatação obstrutiva.\nImpressão: Aerobilia." },
+        { cat: "Vias biliares", phrase: "Dilatação das vias biliares intra e extra-hepáticas, com o colédoco apresentando calibre de [medida] cm. Interrupção abrupta ao nível do [localização], onde se identifica [causa: ex: imagem calculosa / formação expansiva sólida]. Vesícula biliar distendida (hidrópica).\nImpressão: Obstrução biliar ao nível do [localização], secundária a [causa]." }
+    ],
+    "Vesícula / Apêndice": [
+        { cat: "Colelitíase", phrase: "Vesícula biliar de dimensões normais, paredes finas, observando-se [imagem nodular / múltiplas imagens nodulares] com densidade de cálcio, medindo [medida] cm, móvel às manobras de decúbito. Sem espessamento parietal ou líquido pericolecístico.\nImpressão: Colelitíase sem sinais de colecistite aguda no momento." },
+        { cat: "Colelitíase", phrase: "Vesícula biliar com lúmen quase totalmente preenchido por múltiplas imagens com densidade de cálcio, agrupadas, a maior medindo [medida] cm. Paredes finas, sem distensão patológica ou líquido perivesical.\nImpressão: Colelitíase volumosa/múltipla." },
+        { cat: "Colelitíase", phrase: "Vesícula biliar distendida, com imagem de cálcio impactada no infundíbulo/colo, medindo [medida] cm. Espessamento e edema difuso das paredes, borramento da gordura perivesical e pequena lâmina de líquido adjacente.\nImpressão: Sinais compatíveis com colecistite aguda litiásica." },
+        { cat: "Colelitíase", phrase: "Calcificação parietal extensa e circunferencial da vesícula biliar (vesícula em porcelana), com cálculo calcificado em seu interior medindo [medida] cm. Sem sinais inflamatórios agudos ou massas parietais evidentes.\nImpressão: Vesícula biliar em porcelana. Requer acompanhamento/conduta cirúrgica devido ao maior risco de neoplasia." },
+        { cat: "Apêndice", phrase: "Apêndice cecal com calibre preservado (diâmetro até 0,6 cm), paredes finas e conteúdo gasoso/fecalóide. Sem distensões anômalas ou borramento da gordura mesentériólica adjacente.\nImpressão: Apêndice cecal de aspecto tomográfico normal." },
+        { cat: "Apêndice", phrase: "Apêndice cecal distendido, diâmetro de [medida] cm, com espessamento e realce anômalo das paredes, moderado borramento da gordura mesentériólica. [Presença/Ausência] de apendicólito em seu lúmen.\nImpressão: Sinais compatíveis com apendicite aguda." },
+        { cat: "Apêndice", phrase: "Sinais de apendicite aguda com solução de continuidade das paredes, coleção/abscesso na fossa ilíaca direita medindo [medida] cm, focos de pneumoperitônio adjacentes e importante reação inflamatória do plastrão regional.\nImpressão: Apendicite aguda complicada com perfuração e formação de abscesso." },
+        { cat: "Apêndice", phrase: "Apêndice cecal com calibre e paredes preservados nos segmentos proximal e médio. Distensão e realce parietal restritos à extremidade distal, medindo [medida] cm, com discreto borramento gorduroso local.\nImpressão: Apendicite aguda focal (de ponta)." },
+        { cat: "Apêndice", phrase: "Apêndice cecal com calibre preservado, paredes finas, sem sinais inflamatórios. Agrupamento de múltiplos linfonodos aumentados no mesentério da fossa ilíaca direita, o maior medindo [medida] cm, de aspecto reacional. Sem líquido livre.\nImpressão: Apêndice cecal normal. Adenite mesentérica provável." }
+    ],
+    "Pâncreas / Baço": [
+        { cat: "Pâncreas", phrase: "Pâncreas de dimensões aumentadas, contornos borrados, realce parenquimatoso discretamente heterogêneo. Densificação da gordura peripancreática e pequenas lâminas de líquido livre adjacentes, sem necrose ou coleções organizadas (Índice de Balthazar B/C).\nImpressão: Sinais compatíveis com pancreatite aguda edematosa." },
+        { cat: "Pâncreas", phrase: "Formação cística multiloculada, medindo [medida] cm, no [cabeça/corpo/cauda] do pâncreas, com provável comunicação com o ducto pancreático principal e sem componentes sólidos ou realces parietais internos. Aspecto sugestivo de NMPI (IPMN) de ductos secundários.\nImpressão: Achados sugestivos de NMPI. Recomenda-se correlação com RM/Colangio-RM (critérios de Fukuoka)." },
+        { cat: "Pâncreas", phrase: "Formação expansiva sólida, hipocaptante, medindo [medida] cm, na [cabeça/corpo/cauda] pancreática. Promove dilatação do ducto pancreático à montante e apresenta sinais de contato/infiltração da [vaso].\nImpressão: Lesão expansiva sólida pancreática (provável adenocarcinoma)." },
+        { cat: "Pâncreas", phrase: "Formação cística unilocular, paredes finas com realce pelo contraste, medindo [medida] cm, na [região]. Sem componentes sólidos, septos ou calcificações. Compatível com pseudocisto no contexto de pancreatite/manipulação prévia.\nImpressão: Pseudocisto pancreático." },
+        { cat: "Pâncreas", phrase: "Formação cística multiloculada com aspecto em 'favo de mel' (microcística), medindo [medida] cm, na [localização], com cicatriz central calcificada (calcificação estrelada). Sem comunicação com o ducto pancreático principal.\nImpressão: Lesão cística pancreática sugestiva de cistoadenoma seroso." },
+        { cat: "Baço", phrase: "Baço de dimensões aumentadas, parênquima homogêneo, contornos regulares. Maior eixo longitudinal medindo [medida] cm (referência até 12,0 cm). Sem lesões focais ou circulação colateral periesplênica.\nImpressão: Esplenomegalia." },
+        { cat: "Baço", phrase: "Área periférica hipodensa, configuração cunha/triangular com a base voltada para a periferia e o ápice para o hilo, no [terço] do baço. Sem realce significativo após contraste.\nImpressão: Infarto esplênico (área de isquemia focal)." },
+        { cat: "Baço", phrase: "Pequena formação nodular sólida, contornos regulares, adjacente ao hilo esplênico, medindo [medida] cm, com densidade e padrão de realce idênticos ao parênquima esplênico.\nImpressão: Baço acessório." },
+        { cat: "Baço", phrase: "Baço com múltiplos pequenos focos puntiformes de densidade de cálcio distribuídos difusamente pelo parênquima (corpos de Gamna-Gandy), no contexto de hipertensão portal.\nImpressão: Siderose esplênica (corpos de Gamna-Gandy)." }
+    ],
+    "Rins / Ureter": [
+        { cat: "Cistos renais", phrase: "Formação cística simples, cortical, contornos regulares e conteúdo homogêneo (densidade de água), medindo [medida] cm, no [terço superior/médio/inferior] do rim [lateralidade]. Sem septos, calcificações parietais ou realce pelo contraste (Bosniak I).\nImpressão: Cisto renal simples à [lateralidade] (Bosniak I)." },
+        { cat: "Cistos renais", phrase: "Múltiplas formações císticas corticais bilaterais esparsas com características de cistos simples. Dominantes: rim direito [medida] cm no [terço]; rim esquerdo [medida] cm no [terço]. Demais infracentimétricos, sem sinais de complexidade (Bosniak I).\nImpressão: Cistos renais simples bilaterais (Bosniak I)." },
+        { cat: "Nefrolitíase", phrase: "Imagem nodular com densidade de cálcio ([medida] HU), medindo [medida] cm, no [grupamento calicinal superior/médio/inferior ou pelve renal] do rim [lateralidade]. Sem sinais de hidronefrose ou cálculos impactados no trajeto ureteral.\nImpressão: Nefrolitíase à [lateralidade] sem sinais obstrutivos." },
+        { cat: "Nefrolitíase", phrase: "Múltiplas imagens com densidade de cálcio em ambos os rins. Rim direito: cálculo no [localização] medindo [medida] cm ([densidade] HU). Rim esquerdo: cálculo no [localização] medindo [medida] cm ([densidade] HU). Sistema coletor bilateral com amplitude normal, sem ectasia pielocaliciana.\nImpressão: Nefrolitíase bilateral sem sinais obstrutivos." },
+        { cat: "Nefrolitíase", phrase: "Imagem com densidade de cálcio medindo [medida] cm, na [localização: ex: junção ureteropélvica / ureter distal] do lado [lateralidade], determinando ectasia do sistema pielocaliciano e do ureter a montante. Discreto borramento da gordura perirrenal adjacente, sugerindo sofrimento renal agudo.\nImpressão: Nefrolitíase à [lateralidade] com sinais de uropatia obstrutiva (hidronefrose)." },
+        { cat: "Ureterolitíase", phrase: "Imagem com densidade de cálcio ([medida] HU), medindo [medida] cm, impactada na junção ureteropélvica (JUP) à [lateralidade], determinando acentuada ectasia do sistema pielocaliciano, com discreto borramento da gordura perirrenal.\nImpressão: Cálculo ureteral proximal à [lateralidade] (JUP) com sinais obstrutivos." },
+        { cat: "Ureterolitíase", phrase: "Imagem com densidade de cálcio ([medida] HU), medindo [medida] cm, no trajeto do ureter médio à [lateralidade], ao nível do cruzamento com os vasos ilíacos, condicionando uretero-hidronefrose moderada a montante.\nImpressão: Cálculo ureteral médio à [lateralidade] com hidronefrose secundária." },
+        { cat: "Ureterolitíase", phrase: "Pequena imagem com densidade de cálcio ([medida] HU), medindo [medida] cm, na junção ureterovesical (JUV) à [lateralidade] (segmento intramural), com leve edema da mucosa vesical adjacente e discreta ureterectasia a montante.\nImpressão: Cálculo ureteral distal à [lateralidade] (JUV) com sinais obstrutivos leves." },
+        { cat: "Ureterolitíase", phrase: "Imagem com densidade de cálcio medindo [medida] cm no trajeto do ureter distal à [lateralidade], apresentando o 'sinal do halo' (edema circunferencial da parede ureteral) e leve ureterectasia a montante. Achados que favorecem natureza ureterolítica em detrimento de flebólito.\nImpressão: Ureterolitíase distal à [lateralidade] com sinais inflamatórios locais e obstrutivos leves." },
+        { cat: "Ureterolitíase", phrase: "Imagens com densidade de cálcio, arredondadas, algumas com 'sinal do centro radiotransparente' (lucência central), na escavação pélvica, fora do trajeto ureteral. Sem hidronefrose ou sinais de uropatia obstrutiva.\nImpressão: Flebólitos pélvicos. Ausência de cálculos ureterais radiopacos." }
+    ],
+    "Adrenais / Retrop.": [
+        { cat: "Adrenais", phrase: "Glândulas adrenais de localização, forma e dimensões preservadas, com espessura das hastes dentro da normalidade. Sem formações nodulares ou áreas de realce anômalo.\nImpressão: Glândulas adrenais de aspecto tomográfico normal." },
+        { cat: "Adrenais", phrase: "Formação nodular sólida, contornos regulares, na adrenal [lateralidade], medindo [medida] cm, com densidade espontânea de [medida] HU (inferior a 10 HU), característico de adenoma rico em gordura intracitoplasmática.\nImpressão: Nódulo na adrenal [lateralidade] com características de adenoma." },
+        { cat: "Adrenais", phrase: "Formação expansiva na adrenal [lateralidade], medindo [medida] cm, com áreas de densidade de gordura franca (valores entre -20 e -100 HU) de permeio a componentes de partes moles. Sem invasão de estruturas adjacentes.\nImpressão: Mielolipoma de adrenal." },
+        { cat: "Adrenais", phrase: "Nódulo na adrenal [lateralidade], medindo [medida] cm, com densidade pré-contraste de [medida] HU. Fase portal: [medida] HU. Fase tardia (15 min): [medida] HU. Washout absoluto de [medida]% (>60% favorece adenoma).\nImpressão: Nódulo na adrenal [lateralidade] — padrão de lavagem favorece natureza benigna (adenoma)." },
+        { cat: "Adrenais", phrase: "Volumosa massa sólida na adrenal [lateralidade], contornos irregulares, realce heterogêneo, densidade espontânea elevada ([medida] HU) e baixo índice de washout. Plano de clivagem borrado com o polo superior do rim adjacente.\nImpressão: Massa sólida na adrenal [lateralidade] com características indeterminadas/suspeitas. Considerar metástase ou neoplasia primária." },
+        { cat: "Retroperitônio", phrase: "Espaço retroperitoneal com configuração preservada, planos gordurosos periaórticos e pericavais com densidade mantida. Sem formações expansivas, coleções ou linfonodomegalias significativas.\nImpressão: Retroperitônio de aspecto preservado." },
+        { cat: "Retroperitônio", phrase: "Múltiplas formações nodulares sólidas com realce homogêneo nas cadeias [para-aórtica / inter-aortocava / paracava], o maior medindo [medida] cm no menor eixo. Tendência à coalescência em massas linfonodais circundando parcialmente os vasos, sem estenoses luminais.\nImpressão: Linfonodomegalias retroperitoneais." },
+        { cat: "Retroperitônio", phrase: "Tecido com densidade de partes moles envolvendo a aorta abdominal e a veia cava inferior, estendendo-se lateralmente e englobando ambos os ureteres. Ureterohidronefrose bilateral secundária ao aprisionamento extrínseco dos ureteres.\nImpressão: Achados sugestivos de fibrose retroperitoneal com repercussão obstrutiva urinária." },
+        { cat: "Vasos", phrase: "Aorta abdominal com trajeto e calibres preservados, contornos regulares. Maior diâmetro transverso no segmento infrarrenal de [medida] cm. Sem dilatações aneurismáticas ou sinais de dissecção.\nImpressão: Aorta abdominal de aspecto preservado." },
+        { cat: "Vasos", phrase: "Dilatação aneurismática fusiforme da aorta abdominal no segmento [suprarrenal/infrarrenal], por [medida] cm de comprimento. Maior diâmetro transverso de [medida] cm. Trombo mural excêntrico reduzindo a luz efetiva para [medida] cm. Colo proximal distando [medida] cm das artérias renais.\nImpressão: Aneurisma da aorta abdominal [com/sem] trombo mural." }
+    ],
+    "Bexiga / Linfonodos": [
+        { cat: "Bexiga", phrase: "Bexiga com boa repleção, paredes finas e regulares. Conteúdo homogêneo com densidade de urina. Sem cálculos, formações vegetantes ou espessamento parietal. Planos gordurosos perivesicais preservados.\nImpressão: Bexiga de aspecto preservado." },
+        { cat: "Bexiga", phrase: "Bexiga com repleção satisfatória, espessamento difuso das paredes e irregularidades do contorno interno (trabeculações/bexiga de esforço). Pequenos divertículos de parede laterais. Sem cálculos ou lesões vegetantes.\nImpressão: Sinais de bexiga de esforço (uropatia obstrutiva infravesical crônica)." },
+        { cat: "Bexiga", phrase: "Formação expansiva sólida, vegetante, base de implantação séssil na [localização: parede lateral direita/esquerda / teto / base] da bexiga, medindo [medida] cm, com realce pelo contraste projetando-se para a luz vesical. Planos gordurosos perivesicais adjacentes [estão preservados / apresentam densificação].\nImpressão: Formação expansiva vegetante na parede [localização] da bexiga — considerar lesão de linhagem urotelial." },
+        { cat: "Bexiga", phrase: "Imagem nodular com densidade de cálcio ([medida] HU), medindo [medida] cm, no interior da bexiga, móvel às manobras de decúbito. Sem espessamento parietal significativo associado.\nImpressão: Cálculo vesical." },
+        { cat: "Bexiga", phrase: "Saculação da parede vesical (divertículo), comunicando-se com o lúmen principal através de colo estreito, na [localização], medindo [medida] cm, com conteúdo urinário homogêneo e sem cálculos ou lesões em seu interior.\nImpressão: Divertículo vesical." },
+        { cat: "Linfonodos", phrase: "Linfonodos retroperitoneais e das cadeias ilíacas com morfologia e dimensões dentro da normalidade. Sem agrupamentos linfonodais ou massas coalescentes.\nImpressão: Ausência de linfonodomegalias abdominais ou pélvicas com critérios de significância radiológica." },
+        { cat: "Linfonodos", phrase: "Linfonodos com dimensões discretamente aumentadas nas cadeias [mesentéricas / ilíacas externas], medindo até [medida] cm no menor eixo. Forma ovalada, contornos regulares e hilo gorduroso preservado, sugerindo natureza reacional.\nImpressão: Linfonodos de aspecto reacional na cadeia [especificar]." },
+        { cat: "Linfonodos", phrase: "Múltiplas formações nodulares sólidas hipo/isodensas nas cadeias [para-aórticas / ilíacas internas / obturatórias], o maior medindo [medida] cm no menor eixo, com realce homogêneo e tendência à coalescência (conglomerado linfonodal), com discreto efeito de massa sobre estruturas adjacentes.\nImpressão: Linfonodomegalias abdominais e pélvicas a esclarecer (considerar etiologia secundária ou linfoproliferativa)." }
+    ],
+    "Pelve Feminina": [
+        { cat: "Útero normal", phrase: "Útero de dimensões, contornos e densidade tomográfica preservados para a faixa etária. Regiões anexiais sem evidências de formações expansivas sólidas ou coleções líquidas volumosas. Planos gordurosos pélvicos de permeio preservados.\nImpressão: Órgãos pélvicos de aspecto tomográfico preservado (limitada avaliação por este método)." },
+        { cat: "Miomatose", phrase: "Útero de dimensões aumentadas e contornos lobulados, densidade heterogênea do parênquima, com [formação nodular / múltiplas formações nodulares] sólidas, a maior medindo [medida] cm. Calcificações grosseiras de permeio (compatíveis com miomas calcificados).\nImpressão: Aumento volumétrico do útero com sinais sugestivos de miomatose." },
+        { cat: "Ovários / Anexos", phrase: "Formação expansiva com densidade de líquido (ou mista), paredes finas, em região anexial [lateralidade], medindo [medida] cm. Sem vegetações sólidas grosseiras ou septos espessos evidentes. Aspecto indeterminado (cisto funcional vs. neoplasia epitelial).\nImpressão: Formação expansiva anexial à [lateralidade]. Sugere-se correlação com US transvaginal ou RM de pelve." },
+        { cat: "Ovários / Anexos", phrase: "Formação expansiva complexa em região anexial [lateralidade], medindo [medida] cm, com áreas de densidade de gordura franca, focos de calcificação (dentes/ossos) e componentes de partes moles. Aspecto altamente sugestivo de teratoma cístico maduro.\nImpressão: Achados sugestivos de teratoma ovariano à [lateralidade]." },
+        { cat: "Ovários / Anexos", phrase: "Formação tubular com conteúdo líquido em região anexial [lateralidade], sugerindo distensão da tuba uterina (hidrossalpinge). [Se houver borramento da gordura ao redor: O aspecto pode estar relacionado a processo inflamatório/infeccioso pélvico (DIP)].\nImpressão: Hidrossalpinge à [lateralidade] / Suspeita de DIP." }
+    ],
+    "Pelve Masculina": [
+        { cat: "Próstata normal", phrase: "Próstata de dimensões preservadas, contornos regulares e densidade homogênea. Vesículas seminais de configuração e coeficientes de atenuação normais. Planos gordurosos adjacentes preservados.\nImpressão: Próstata e vesículas seminais de aspecto tomográfico preservado." },
+        { cat: "HPB", phrase: "Próstata de dimensões aumentadas, contornos lobulados, medindo [medida] x [medida] x [medida] cm, volume estimado em [medida] cm³. Proeminência do lobo médio com nítida impressão sobre o assoalho vesical. Calcificações parenquimatosas grosseiras de permeio.\nImpressão: Aumento volumétrico da próstata (adenoma prostático) com efeito de massa sobre a base da bexiga." },
+        { cat: "Vesículas seminais", phrase: "Vesícula seminal [lateralidade] não visualizada ou com dimensões reduzidas, podendo estar relacionado a variação anatômica ou antecedente cirúrgico.\nImpressão: Agenesia/hipoplasia de vesícula seminal à [lateralidade]." },
+        { cat: "Vesículas seminais", phrase: "Distensão cística da vesícula seminal [lateralidade], com conteúdo líquido homogêneo, medindo [medida] cm. Aspecto inespecífico, podendo representar retenção de secreção.\nImpressão: Cisto/distensão de vesícula seminal à [lateralidade]." },
+        { cat: "Neoplasia prostática", phrase: "Próstata de dimensões aumentadas e contornos irregulares. Densificação da gordura periprostática e indefinição dos planos de clivagem com as vesículas seminais e a parede posterior da bexiga. Linfonodomegalias nas cadeias ilíacas internas/obturatórias.\nImpressão: Massa prostática com sinais de extensão extra-capsular e acometimento linfonodal regional." }
+    ],
+    "Tórax": [
+        { cat: "Pulmões", phrase: "Opacidade em vidro fosco no lobo ___, de provável etiologia inflamatória / infecciosa / viral." },
+        { cat: "Pulmões", phrase: "Consolidação parenquimatosa lobar / segmentar no lobo ___, com broncograma aéreo, sugestiva de pneumonia." },
+        { cat: "Pleura", phrase: "Pequeno derrame pleural à direita / esquerda, sem sinais de loculação ou espessamento pleural associado." },
+        { cat: "Mediastino", phrase: "Linfadenopatia mediastinal com linfonodos medindo até ___ mm no menor eixo." }
+    ],
+    "Cabeça/Pescoço": [
+        { cat: "Tireoide", phrase: "Nódulo sólido / misto / colóide no lobo ___ da tireoide, medindo ___ mm. TIRADS ___." },
+        { cat: "Tireoide", phrase: "Bócio multinodular com múltiplos nódulos bilaterais, o maior medindo ___ mm. TIRADS ___ para o nódulo dominante." },
+        { cat: "Linfonodos", phrase: "Linfonodo cervical de aspecto suspeito (forma arredondada, perda do hilo, ___ mm), localizado em nível ___." },
+        { cat: "Partes moles", phrase: "Formação cística de paredes finas no espaço ___, medindo ___ mm, compatível com cisto sebáceo / branquial." }
+    ],
+    "Musculoesq.": [
+        { cat: "Ombro", phrase: "Rotura parcial do tendão do supraespinhal na região crítica, com extensão de ___ mm." },
+        { cat: "Ombro", phrase: "Distensão da bursa subacromial-subdeltoidea com lâmina líquida medindo ___ mm, sem cálculos associados." },
+        { cat: "Joelho", phrase: "Lesão horizontal do corno posterior do menisco medial / lateral, sem extensão à superfície articular." },
+        { cat: "Coluna", phrase: "Protrusão discal central em ___, com contato / compressão da raiz nervosa ___." },
+        { cat: "Coluna", phrase: "Hérnia discal extrusão em ___, com migração ___, determinando compressão de ___." }
+    ],
+    "Mama": [
+        { cat: "Nódulo", phrase: "Nódulo sólido hipoecóico no QSE / QSI da mama ___, medindo ___ mm, de contornos irregulares. BIRADS-US: 4A." },
+        { cat: "Cisto", phrase: "Cisto complicado com debris / septações finas no quadrante ___, medindo ___ mm. BIRADS-US: 3." },
+        { cat: "Calcif.", phrase: "Microcalcificações agrupadas, pleomórficas / amorfas, na mama ___. BIRADS mamográfico: 4." },
+        { cat: "Linfonodo", phrase: "Linfonodo axilar com espessamento cortical focal / perda do hilo gorduroso, medindo ___ mm, suspeito para comprometimento neoplásico." }
+    ],
+    "Vascular": [
+        { cat: "Carótidas", phrase: "Espessamento da íntima-média (> 0,9 mm) bilateralmente, compatível com ateromatose incipiente." },
+        { cat: "Carótidas", phrase: "Placa ateromatosa calcificada na bifurcação carotídea ___, determinando estenose leve / moderada / severa." },
+        { cat: "Veias MMII", phrase: "Trombose venosa profunda da veia ___, com segmento não compressível de ___ cm, sem fluxo ao Doppler colorido." },
+        { cat: "Veias MMII", phrase: "Insuficiência venosa superficial com refluxo na grande safena / pequena safena, com duração > 0,5 s." }
+    ],
+    "Neuro": [
+        { cat: "Encéfalo", phrase: "Área de restrição à difusão no território da artéria cerebral ___, compatível com isquemia aguda / subaguda." },
+        { cat: "Encéfalo", phrase: "Lesão expansiva extra / intra-axial no ___, com ___ cm, realce ao contraste, sem desvio da linha média." },
+        { cat: "Coluna", phrase: "Compressão medular em ___ com alteração de sinal T2 intramedular, sugestiva de mielopatia compressiva." },
+        { cat: "Encéfalo", phrase: "Atrofia corticossubcortical difusa, com alargamento dos sulcos corticais e sistema ventricular." }
+    ]
+};
+
+// ── STATE ──────────────────────────────────────────────
+let formulas = JSON.parse(JSON.stringify(defaultFormulas));
+let alternativas = JSON.parse(JSON.stringify(defaultAlternativas));
+
+// ── API KEY (não mais necessário — LanguageTool é gratuito)
+const SAVED_API_KEY = '';
+
+// ── BANCO DE DADOS SQLite (via servidor local) ─────────
+const DB_SERVER = 'http://localhost:3131';
+let dbMode = false; // true = servidor local disponível
+
+// Indicador de modo no header
+function setDbStatus(online) {
+    dbMode = online;
+    const dbBadge = document.getElementById('db-badge');
+    const tipDb   = document.getElementById('tip-db');
+    const btnSave = document.getElementById('btn-save-db');
+    if (dbBadge) {
+        dbBadge.textContent = online ? '🗄️ DB' : '📄 LOCAL';
+        dbBadge.title = online
+            ? 'Conectado ao banco SQLite local (radioscribe.db)'
+            : 'Modo arquivo local — inicie radioscribe-server.js para usar o banco';
+        dbBadge.style.background = online ? 'rgba(16,185,129,.15)' : 'rgba(100,116,139,.15)';
+        dbBadge.style.borderColor = online ? '#10b981' : '#475569';
+        dbBadge.style.color = online ? '#10b981' : '#94a3b8';
+    }
+    if (tipDb)   tipDb.style.display   = online ? 'block' : 'none';
+    if (btnSave) btnSave.style.display = online ? 'flex'  : 'none';
+}
+
+async function dbFetch(path, options = {}) {
+    const resp = await fetch(DB_SERVER + path, {
+        ...options,
+        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+    });
+    if (!resp.ok) throw new Error(`DB error ${resp.status}`);
+    return resp.json();
+}
+
+// Carregar dados do banco (sobrescreve defaults)
+async function loadFromDB() {
+    try {
+        const [f, a, cfg] = await Promise.all([
+            dbFetch('/api/formulas'),
+            dbFetch('/api/alternativas'),
+            dbFetch('/api/config')
+        ]);
+
+        // Só usa do banco se tiver dados
+        if (Object.keys(f).length > 0) formulas = f;
+        if (Object.keys(a).length > 0) alternativas = a;
+
+        // Restaurar config de IA
+        if (cfg.ai_provider) {
+            localStorage.setItem(AI_PROVIDER_STORAGE, cfg.ai_provider);
+            const sel = document.getElementById('ai-provider-select');
+            if (sel) { sel.value = cfg.ai_provider; onProviderChange(); }
+        }
+        if (cfg.ai_key) {
+            localStorage.setItem(AI_KEY_STORAGE, cfg.ai_key);
+            const inp = document.getElementById('api-key-input');
+            if (inp) inp.value = cfg.ai_key;
+        }
+
+        setDbStatus(true);
+        console.log('[RadioScribe] 🗄️ Dados carregados do banco SQLite');
+        return true;
+    } catch(e) {
+        setDbStatus(false);
+        console.log('[RadioScribe] 📄 Servidor não encontrado — usando modo arquivo local');
+        return false;
+    }
+}
+
+// Salvar fórmulas e alternativas no banco
+async function saveToDB() {
+    if (!dbMode) return;
+    try {
+        await Promise.all([
+            dbFetch('/api/formulas', { method: 'POST', body: JSON.stringify(formulas) }),
+            dbFetch('/api/alternativas', { method: 'POST', body: JSON.stringify(alternativas) })
+        ]);
+        // Salvar config de IA também
+        const key = getApiKey();
+        const provider = getProvider();
+        if (key || provider) {
+            await dbFetch('/api/config', { method: 'POST', body: JSON.stringify({ ai_key: key, ai_provider: provider }) });
+        }
+        showToast('Salvo no banco ✓', '#10b981');
+    } catch(e) {
+        console.error('[RadioScribe] Erro ao salvar no banco:', e.message);
+        showToast('Erro ao salvar no banco', '#ef4444');
+    }
+}
+
+// Salvar laudo atual no banco
+async function saveLaudoDB(titulo) {
+    if (!dbMode) return null;
+    const texto = editor.innerText.trim();
+    if (!texto) return null;
+    try {
+        const res = await dbFetch('/api/laudos', {
+            method: 'POST',
+            body: JSON.stringify({ titulo: titulo || null, texto })
+        });
+        return res.id;
+    } catch(e) {
+        console.error('[RadioScribe] Erro ao salvar laudo:', e.message);
+        return null;
+    }
+}
+
+// ── NLP ───────────────────────────────────────────────
+const medicalNLP = {
+    // ── Pontuação ─────────────────────────────────────────
+    "vírgula"               : ",",
+    "ponto"                 : ".",
+    "ponto final"           : ".",
+    "ponto e vírgula"       : ";",
+    "dois pontos"           : ":",
+    "interrogação"          : "?",
+    "ponto de interrogação" : "?",
+    "exclamação"            : "!",
+    "ponto de exclamação"   : "!",
+    "reticências"           : "...",
+    "hífen"                 : "-",
+    "travessão"             : "—",
+    "barra"                 : "/",
+    "barra invertida"       : "\\",
+    "arroba"                : "@",
+    "hashtag"               : "#",
+    "asterisco"             : "*",
+    "percentual"            : "%",
+    "mais"                  : "+",
+    "igual"                 : "=",
+    "menor que"             : "<",
+    "maior que"             : ">",
+
+    // ── Parênteses e colchetes ────────────────────────────
+    "abre parêntese"        : "(",
+    "fecha parêntese"       : ")",
+    "abre colchete"         : "[",
+    "fecha colchete"        : "]",
+    "abre chave"            : "{",
+    "fecha chave"           : "}",
+
+    // ── Aspas ─────────────────────────────────────────────
+    "abre aspas"            : '"',
+    "fecha aspas"           : '"',
+    "aspas"                 : '"',
+
+    // ── Navegação / formatação ────────────────────────────
+    "nova linha"            : "\n",
+    "parágrafo"             : "\n\n",
+    "novo parágrafo"        : "\n\n",
+    "tabulação"             : "\t",
+
+    // ── Apagar (tratados separadamente no handler) ────────
+    // "apagar" → handled in speech result handler
+    // "apagar palavra" → handled in speech result handler
+
+    // ── Fórmulas rápidas médicas ──────────────────────────
+    "conclusão normal"      : "CONCLUSÃO: Exame dentro dos limites da normalidade para o método utilizado.",
+    "sem lesões focais"     : "sem lesões focais identificadas",
+    "contornos regulares"   : "contornos regulares e bem definidos",
+    "dimensões normais"     : "de dimensões normais para a faixa etária",
+    "ausência de"           : "Ausência de",
+    "não há evidência"      : "Não há evidência de",
+    "compatível com"        : "compatível com",
+    "sugestivo de"          : "sugestivo de",
+    "à direita"             : "à direita",
+    "à esquerda"            : "à esquerda",
+    "bilateral"             : "bilateral",
+    "bilateralmente"        : "bilateralmente"
+
+    // "próximo campo" e "apagar" handled separately in speech result handler
+};
+
+// ── TOAST ──────────────────────────────────────────────
+const toastEl = document.getElementById('toast');
+let toastTimer;
+function showToast(msg, color='#10b981') {
+    toastEl.textContent = msg; toastEl.style.background = color;
+    toastEl.classList.add('show'); clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
+}
+
+// ── INSERT AT CURSOR ───────────────────────────────────
+const editor = document.getElementById('editor');
+let lastInsertedText = ''; // para o comando "apagar"
+
+function insertText(text) {
+    editor.focus();
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0); range.deleteContents();
+        const lines = text.split('\n'), frag = document.createDocumentFragment();
+        lines.forEach((line, i) => { if (i>0) frag.appendChild(document.createElement('br')); frag.appendChild(document.createTextNode(line)); });
+        range.insertNode(frag); range.collapse(false);
+        sel.removeAllRanges(); sel.addRange(range);
+    } else {
+        text.split('\n').forEach((line, i) => { if (i>0) editor.appendChild(document.createElement('br')); editor.appendChild(document.createTextNode(line)); });
+    }
+    // scroll preservado — não pula para o fim
+    showToast('Texto inserido ✓');
+}
+
+// ── APAGAR ÚLTIMO TRECHO DITADO ────────────────────────
+function deleteLastInserted() {
+    if (!lastInsertedText) { showToast('Nada para apagar', '#64748b'); return; }
+    const current = editor.innerText;
+    const idx = current.lastIndexOf(lastInsertedText.trimEnd());
+    if (idx !== -1) {
+        const before = current.substring(0, idx);
+        const after  = current.substring(idx + lastInsertedText.trimEnd().length);
+        editor.innerHTML = '';
+        (before + after).split('\n').forEach((line, i) => {
+            if (i > 0) editor.appendChild(document.createElement('br'));
+            editor.appendChild(document.createTextNode(line));
+        });
+        showToast('Trecho apagado ✓', '#f59e0b');
+    }
+    lastInsertedText = '';
+}
+
+// ── APAGAR ÚLTIMA PALAVRA ──────────────────────────────
+function deleteLastWord() {
+    const text = editor.innerText;
+    // Remove a última palavra (e espaço/pontuação antes dela)
+    const trimmed = text.trimEnd();
+    const newText = trimmed.replace(/[\s\S]*(\s)(\S+)$/, '$1') || '';
+    // Fallback: apaga tudo se só tinha uma palavra
+    const result = trimmed.replace(/\S+\s*$/, '').trimEnd();
+    editor.innerHTML = '';
+    if (result) {
+        result.split('\n').forEach((line, i) => {
+            if (i > 0) editor.appendChild(document.createElement('br'));
+            editor.appendChild(document.createTextNode(line));
+        });
+    }
+    showToast('Palavra apagada ✓', '#f59e0b');
+    lastInsertedText = '';
+}
+
+// ── ESCAPE HTML ────────────────────────────────────────
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── FÓRMULAS ───────────────────────────────────────────
+const formulaRegionSelect = document.getElementById('formula-region-select');
+const formulasList = document.getElementById('formulas-list');
+
+function rebuildFormulaRegionSelect(id) {
+    const el = document.getElementById(id), cur = el.value;
+    el.innerHTML = '';
+    Object.keys(formulas).forEach(r => {
+        const o = document.createElement('option'); o.value = r; o.textContent = r;
+        if (r === cur) o.selected = true; el.appendChild(o);
+    });
+}
+
+function renderFormulas(region) {
+    formulasList.innerHTML = '';
+    (formulas[region] || []).forEach((f, idx) => {
+        const div = document.createElement('div'); div.className = 'formula-item';
+        div.innerHTML = `<div class="fi-label">${esc(f.label)}</div>
+            <div class="fi-preview">${esc(f.text.replace(/\n/g,' '))}</div>
+            <div class="fi-actions">
+                <button class="fi-btn fi-btn-insert" title="Inserir">+</button>
+                <button class="fi-btn fi-btn-edit" title="Editar">✏</button>
+                <button class="fi-btn fi-btn-del" title="Excluir">✕</button>
+            </div>`;
+        div.querySelector('.fi-btn-insert').onclick = e => { e.stopPropagation(); insertText(f.text); };
+        div.querySelector('.fi-btn-edit').onclick = e => { e.stopPropagation(); openEditFormula(region, idx); };
+        div.querySelector('.fi-btn-del').onclick = e => { e.stopPropagation(); deleteFormula(region, idx); };
+        div.addEventListener('click', () => insertText(f.text));
+        formulasList.appendChild(div);
+    });
+}
+
+formulaRegionSelect.addEventListener('change', () => renderFormulas(formulaRegionSelect.value));
+
+// ── ALTERNATIVAS ───────────────────────────────────────
+const phrasePills = document.getElementById('phrase-pills');
+const phrasesList = document.getElementById('phrases-list');
+let activePhraseRegion = null;
+
+function renderPills() {
+    phrasePills.innerHTML = '';
+    const all = document.createElement('button');
+    all.className = 'region-pill' + (!activePhraseRegion ? ' active' : '');
+    all.textContent = 'Todas';
+    all.onclick = () => { activePhraseRegion = null; renderPills(); renderPhrases(); };
+    phrasePills.appendChild(all);
+    Object.keys(alternativas).forEach(r => {
+        const btn = document.createElement('button');
+        btn.className = 'region-pill' + (r === activePhraseRegion ? ' active' : '');
+        btn.textContent = r;
+        btn.onclick = () => { activePhraseRegion = r; renderPills(); renderPhrases(); };
+        phrasePills.appendChild(btn);
+    });
+}
+
+function renderPhrases() {
+    phrasesList.innerHTML = '';
+    const data = activePhraseRegion
+        ? (alternativas[activePhraseRegion]||[]).map((p,i)=>({...p,_r:activePhraseRegion,_i:i}))
+        : Object.entries(alternativas).flatMap(([r,arr])=>arr.map((p,i)=>({...p,_r:r,_i:i})));
+    data.forEach(p => {
+        const div = document.createElement('div'); div.className = 'phrase-item';
+        div.innerHTML = `<strong>${esc(p.cat)}</strong>${esc(p.phrase)}
+            <div class="pi-actions">
+                <button class="fi-btn fi-btn-edit" title="Editar">✏</button>
+                <button class="fi-btn fi-btn-del" title="Excluir">✕</button>
+            </div>`;
+        div.querySelector('.fi-btn-edit').onclick = e => { e.stopPropagation(); openEditPhrase(p._r, p._i); };
+        div.querySelector('.fi-btn-del').onclick = e => { e.stopPropagation(); deletePhrase(p._r, p._i); };
+        div.addEventListener('click', () => insertText(p.phrase));
+        phrasesList.appendChild(div);
+    });
+}
+
+// ── MODAL ──────────────────────────────────────────────
+const modalOverlay = document.getElementById('modal-overlay');
+let modalSaveFn = null;
+function openModal(title, bodyHTML, saveFn) {
+    document.getElementById('modal-title').innerHTML = title;
+    document.getElementById('modal-body').innerHTML = bodyHTML;
+    modalSaveFn = saveFn; modalOverlay.classList.add('show');
+}
+function closeModal() { modalOverlay.classList.remove('show'); }
+function saveModal() { if (modalSaveFn) modalSaveFn(); }
+modalOverlay.addEventListener('click', e => { if (e.target===modalOverlay) closeModal(); });
+
+function openEditFormula(region, idx) {
+    const f = formulas[region][idx];
+    openModal('Editar <span>Fórmula</span>',
+        `<div class="form-group"><div class="form-label">Título</div>
+         <input class="form-input" id="mf-label" value="${esc(f.label)}" /></div>
+         <div class="form-group"><div class="form-label">Texto</div>
+         <textarea class="form-textarea" id="mf-text" style="min-height:130px">${esc(f.text)}</textarea></div>`,
+        () => {
+            const lbl = document.getElementById('mf-label').value.trim();
+            const txt = document.getElementById('mf-text').value;
+            if (!lbl || !txt) return;
+            formulas[region][idx] = { label:lbl, text:txt };
+            closeModal(); refreshAll(); showToast('Fórmula atualizada ✓','#a855f7');
+        });
+}
+
+function deleteFormula(region, idx) {
+    if (!confirm('Excluir esta fórmula?')) return;
+    formulas[region].splice(idx, 1); refreshAll(); showToast('Fórmula excluída','#ef4444');
+}
+
+function openEditPhrase(region, idx) {
+    const p = alternativas[region][idx];
+    openModal('Editar <span>Frase Alternativa</span>',
+        `<div class="form-group"><div class="form-label">Categoria</div>
+         <input class="form-input" id="mp-cat" value="${esc(p.cat)}" /></div>
+         <div class="form-group"><div class="form-label">Frase</div>
+         <textarea class="form-textarea" id="mp-text" style="min-height:100px">${esc(p.phrase)}</textarea></div>`,
+        () => {
+            const cat = document.getElementById('mp-cat').value.trim();
+            const phrase = document.getElementById('mp-text').value;
+            if (!cat || !phrase) return;
+            alternativas[region][idx] = { cat, phrase };
+            closeModal(); refreshAll(); showToast('Frase atualizada ✓','#a855f7');
+        });
+}
+
+function deletePhrase(region, idx) {
+    if (!confirm('Excluir esta frase?')) return;
+    alternativas[region].splice(idx, 1); refreshAll(); showToast('Frase excluída','#ef4444');
+}
+
+// ── GERENCIAR — REGIÕES FÓRMULAS ──────────────────────
+function renderRegionManageList() {
+    const list = document.getElementById('region-manage-list'); list.innerHTML = '';
+    Object.keys(formulas).forEach(r => {
+        const div = document.createElement('div'); div.className = 'region-manage-item';
+        div.innerHTML = `<span>${esc(r)}</span><div class="rmi-actions">
+            <button class="rmi-btn rmi-edit">Renomear</button>
+            <button class="rmi-btn rmi-del">Excluir</button></div>`;
+        div.querySelector('.rmi-edit').onclick = () => openModal('Renomear <span>Região</span>',
+            `<div class="form-group"><div class="form-label">Nome</div><input class="form-input" id="mrn" value="${esc(r)}" /></div>`,
+            () => {
+                const n = document.getElementById('mrn').value.trim();
+                if (!n||n===r){closeModal();return;}
+                const e2 = Object.entries(formulas); formulas={};
+                e2.forEach(([k,v])=>{ formulas[k===r?n:k]=v; });
+                closeModal(); refreshAll(); showToast('Região renomeada ✓','#a855f7');
+            });
+        div.querySelector('.rmi-del').onclick = () => {
+            if (!confirm(`Excluir região "${r}"?`)) return;
+            delete formulas[r]; refreshAll(); showToast('Região excluída','#ef4444');
+        };
+        list.appendChild(div);
+    });
+}
+
+function showAddRegionForm() { document.getElementById('add-region-form').classList.remove('hidden'); }
+function hideAddRegionForm() { document.getElementById('add-region-form').classList.add('hidden'); document.getElementById('new-region-name').value=''; }
+function addRegion() {
+    const n = document.getElementById('new-region-name').value.trim();
+    if (!n) return; if (formulas[n]) { showToast('Já existe','#ef4444'); return; }
+    formulas[n]=[]; hideAddRegionForm(); refreshAll(); showToast('Região criada ✓','#a855f7');
+}
+
+// ── GERENCIAR — FÓRMULAS ──────────────────────────────
+const manageFormulaRegion = document.getElementById('manage-formula-region');
+manageFormulaRegion.addEventListener('change', refreshManageFormulas);
+
+function refreshManageFormulas() {
+    rebuildFormulaRegionSelect('manage-formula-region');
+    const region = manageFormulaRegion.value || Object.keys(formulas)[0];
+    const list = document.getElementById('manage-formulas-list'); list.innerHTML='';
+    (formulas[region]||[]).forEach((f, idx) => {
+        const div = document.createElement('div'); div.className='region-manage-item';
+        div.style.cssText='flex-direction:column;align-items:flex-start;gap:3px';
+        div.innerHTML=`<div style="display:flex;justify-content:space-between;width:100%;align-items:center">
+            <span style="font-size:.74rem">${esc(f.label)}</span>
+            <div class="rmi-actions"><button class="rmi-btn rmi-edit">Editar</button><button class="rmi-btn rmi-del">Excluir</button></div>
+            </div>
+            <div style="font-size:.63rem;color:var(--muted);line-height:1.3">${esc(f.text.substring(0,80))}${f.text.length>80?'…':''}</div>`;
+        div.querySelector('.rmi-edit').onclick=()=>openEditFormula(region,idx);
+        div.querySelector('.rmi-del').onclick=()=>deleteFormula(region,idx);
+        list.appendChild(div);
+    });
+}
+
+function showAddFormulaForm() { document.getElementById('add-formula-form').classList.remove('hidden'); }
+function hideAddFormulaForm() {
+    document.getElementById('add-formula-form').classList.add('hidden');
+    document.getElementById('new-formula-label').value=''; document.getElementById('new-formula-text').value='';
+}
+function saveNewFormula() {
+    const region = manageFormulaRegion.value;
+    const label = document.getElementById('new-formula-label').value.trim();
+    const text = document.getElementById('new-formula-text').value.trim();
+    if (!label||!text) { showToast('Preencha todos os campos','#ef4444'); return; }
+    if (!formulas[region]) formulas[region]=[];
+    formulas[region].push({label,text}); hideAddFormulaForm(); refreshAll(); showToast('Fórmula adicionada ✓','#10b981');
+}
+
+// ── GERENCIAR — REGIÕES FRASES ────────────────────────
+function renderPhraseRegionManageList() {
+    const list = document.getElementById('phrase-region-manage-list'); list.innerHTML='';
+    Object.keys(alternativas).forEach(r => {
+        const div = document.createElement('div'); div.className='region-manage-item';
+        div.innerHTML=`<span>${esc(r)}</span><div class="rmi-actions">
+            <button class="rmi-btn rmi-edit">Renomear</button>
+            <button class="rmi-btn rmi-del">Excluir</button></div>`;
+        div.querySelector('.rmi-edit').onclick=()=>openModal('Renomear <span>Região</span>',
+            `<div class="form-group"><div class="form-label">Nome</div><input class="form-input" id="mprn" value="${esc(r)}" /></div>`,
+            ()=>{
+                const n=document.getElementById('mprn').value.trim();
+                if(!n||n===r){closeModal();return;}
+                const e2=Object.entries(alternativas); alternativas={};
+                e2.forEach(([k,v])=>{ alternativas[k===r?n:k]=v; });
+                closeModal(); refreshAll(); showToast('Região renomeada ✓','#a855f7');
+            });
+        div.querySelector('.rmi-del').onclick=()=>{
+            if(!confirm(`Excluir região "${r}"?`))return;
+            delete alternativas[r]; refreshAll(); showToast('Região excluída','#ef4444');
+        };
+        list.appendChild(div);
+    });
+}
+
+function showAddPhraseRegionForm() { document.getElementById('add-phrase-region-form').classList.remove('hidden'); }
+function hideAddPhraseRegionForm() { document.getElementById('add-phrase-region-form').classList.add('hidden'); document.getElementById('new-phrase-region-name').value=''; }
+function addPhraseRegion() {
+    const n=document.getElementById('new-phrase-region-name').value.trim();
+    if(!n)return; if(alternativas[n]){showToast('Já existe','#ef4444');return;}
+    alternativas[n]=[]; hideAddPhraseRegionForm(); refreshAll(); showToast('Região criada ✓','#a855f7');
+}
+
+// ── GERENCIAR — FRASES ────────────────────────────────
+const managePhraseRegion = document.getElementById('manage-phrase-region');
+managePhraseRegion.addEventListener('change', refreshManagePhrases);
+
+function refreshManagePhrases() {
+    rebuildManagePhraseRegion();
+    const region = managePhraseRegion.value||Object.keys(alternativas)[0];
+    const list = document.getElementById('manage-phrases-list'); list.innerHTML='';
+    (alternativas[region]||[]).forEach((p,idx)=>{
+        const div=document.createElement('div'); div.className='region-manage-item';
+        div.style.cssText='flex-direction:column;align-items:flex-start;gap:3px';
+        div.innerHTML=`<div style="display:flex;justify-content:space-between;width:100%;align-items:center">
+            <span style="font-size:.7rem;color:var(--amber)">${esc(p.cat)}</span>
+            <div class="rmi-actions"><button class="rmi-btn rmi-edit">Editar</button><button class="rmi-btn rmi-del">Excluir</button></div>
+            </div>
+            <div style="font-size:.63rem;color:var(--muted);line-height:1.3">${esc(p.phrase.substring(0,90))}${p.phrase.length>90?'…':''}</div>`;
+        div.querySelector('.rmi-edit').onclick=()=>openEditPhrase(region,idx);
+        div.querySelector('.rmi-del').onclick=()=>deletePhrase(region,idx);
+        list.appendChild(div);
+    });
+}
+
+function rebuildManagePhraseRegion() {
+    const cur=managePhraseRegion.value; managePhraseRegion.innerHTML='';
+    Object.keys(alternativas).forEach(r=>{
+        const o=document.createElement('option'); o.value=r; o.textContent=r;
+        if(r===cur) o.selected=true; managePhraseRegion.appendChild(o);
+    });
+}
+
+function showAddPhraseForm() { document.getElementById('add-phrase-form').classList.remove('hidden'); }
+function hideAddPhraseForm() {
+    document.getElementById('add-phrase-form').classList.add('hidden');
+    document.getElementById('new-phrase-cat').value=''; document.getElementById('new-phrase-text').value='';
+}
+function saveNewPhrase() {
+    const region=managePhraseRegion.value;
+    const cat=document.getElementById('new-phrase-cat').value.trim();
+    const phrase=document.getElementById('new-phrase-text').value.trim();
+    if(!cat||!phrase){showToast('Preencha todos os campos','#ef4444');return;}
+    if(!alternativas[region]) alternativas[region]=[];
+    alternativas[region].push({cat,phrase}); hideAddPhraseForm(); refreshAll(); showToast('Frase adicionada ✓','#10b981');
+}
+
+// ── REFRESH ALL ───────────────────────────────────────
+function refreshAll() {
+    rebuildFormulaRegionSelect('formula-region-select');
+    renderFormulas(formulaRegionSelect.value||Object.keys(formulas)[0]);
+    renderPills(); renderPhrases();
+    renderRegionManageList(); refreshManageFormulas();
+    renderPhraseRegionManageList(); refreshManagePhrases();
+    if (typeof saveToLocalStorage === 'function') saveToLocalStorage();
+}
+
+// ── TABS ──────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    });
+});
+
+// ── SEPIA MODE ────────────────────────────────────────
+const btnSepia = document.getElementById('btn-sepia');
+function toggleSepia() {
+    editor.classList.toggle('sepia');
+    btnSepia.classList.toggle('active');
+    localStorage.setItem('rs_sepia', editor.classList.contains('sepia') ? '1' : '0');
+}
+if (localStorage.getItem('rs_sepia') === '1') { editor.classList.add('sepia'); btnSepia.classList.add('active'); }
+
+// ── AUTO-SAVE (localStorage, every 4s) ────────────────
+const autosaveDot = document.getElementById('autosave-dot');
+const autosaveLabel = document.getElementById('autosave-label');
+const DRAFT_KEY = 'rs_draft';
+let autosaveTimer, lastSaved = '';
+
+function setAutosaveStatus(status) {
+    autosaveDot.className = 'autosave-dot ' + status;
+    if (status === 'saved') autosaveLabel.textContent = 'Salvo ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+    else if (status === 'saving') autosaveLabel.textContent = 'Salvando…';
+    else autosaveLabel.textContent = '—';
+}
+
+function autosave() {
+    const text = editor.innerText.trim();
+    if (text === lastSaved || text === '') return;
+    setAutosaveStatus('saving');
+    setTimeout(() => {
+        try {
+            localStorage.setItem(DRAFT_KEY, JSON.stringify({ text, ts: Date.now() }));
+            lastSaved = text;
+            setAutosaveStatus('saved');
+        } catch(e) { setAutosaveStatus(''); }
+    }, 200);
+}
+
+editor.addEventListener('input', () => {
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(autosave, 4000);
+});
+
+// Check for saved draft on load
+(function checkDraft() {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return;
+    try {
+        const { text, ts } = JSON.parse(raw);
+        if (!text || !text.trim()) return;
+        const ageMin = (Date.now() - ts) / 60000;
+        // Show recover banner (only if less than 24h old)
+        if (ageMin < 1440) {
+            const banner = document.getElementById('recover-banner');
+            banner.querySelector('span').textContent =
+                `💾 Laudo salvo às ${new Date(ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})} (${Math.round(ageMin)} min atrás). Deseja recuperar?`;
+            banner.classList.add('show');
+        }
+    } catch(e) {}
+})();
+
+function recoverDraft() {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return;
+    try {
+        const { text } = JSON.parse(raw);
+        editor.innerHTML = '';
+        text.split('\n').forEach((line, i) => {
+            if (i > 0) editor.appendChild(document.createElement('br'));
+            editor.appendChild(document.createTextNode(line));
+        });
+        lastSaved = text;
+        setAutosaveStatus('saved');
+    } catch(e) {}
+    dismissRecover();
+    showToast('Laudo recuperado ✓', '#10b981');
+}
+function dismissRecover() {
+    document.getElementById('recover-banner').classList.remove('show');
+}
+
+// ── NEXT FIELD ( ___ ) ────────────────────────────────
+function jumpNextField() {
+    const text = editor.innerText;
+    const sel = window.getSelection();
+
+    // Get current cursor position in plain text offset
+    let cursorOffset = 0;
+    if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        const preRange = document.createRange();
+        preRange.selectNodeContents(editor);
+        preRange.setEnd(range.startContainer, range.startOffset);
+        cursorOffset = preRange.toString().length;
+    }
+
+    // Find next ___ after cursor
+    const fieldIdx = text.indexOf('___', cursorOffset);
+    if (fieldIdx === -1) {
+        showToast('Nenhum campo ___ encontrado', '#64748b');
+        return;
+    }
+
+    // Walk the DOM to find the text node and offset
+    function findNodeAtOffset(node, targetOffset) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            if (targetOffset <= node.length) return { node, offset: targetOffset };
+            return { node: null, offset: targetOffset - node.length };
+        }
+        for (const child of node.childNodes) {
+            const result = findNodeAtOffset(child, targetOffset);
+            if (result.node) return result;
+            targetOffset = result.offset;
+        }
+        return { node: null, offset: targetOffset };
+    }
+
+    const startResult = findNodeAtOffset(editor, fieldIdx);
+    const endResult = findNodeAtOffset(editor, fieldIdx + 3);
+    if (startResult.node && endResult.node) {
+        const range = document.createRange();
+        range.setStart(startResult.node, startResult.offset);
+        range.setEnd(endResult.node, endResult.offset);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        editor.focus();
+        // Scroll into view
+        const rect = range.getBoundingClientRect();
+        if (rect.top < editor.getBoundingClientRect().top || rect.bottom > editor.getBoundingClientRect().bottom) {
+            editor.scrollTop += rect.top - editor.getBoundingClientRect().top - 60;
+        }
+        showToast('Campo ___ selecionado — pode falar ou digitar', '#0891b2');
+    }
+}
+
+// Hook "próximo campo" voice command
+const _origInsert = insertText;
+// Override speech result handler to intercept "próximo campo"
+
+// ── API KEY MANAGEMENT ────────────────────────────────
+const AI_KEY_STORAGE = 'rs_ai_key';
+const AI_PROVIDER_STORAGE = 'rs_ai_provider';
+
+// Load saved values on start
+(function loadApiSettings() {
+    const savedKey = localStorage.getItem(AI_KEY_STORAGE) || '';
+    const savedProvider = localStorage.getItem(AI_PROVIDER_STORAGE) || 'groq'; // Groq padrão
+    const keyInput = document.getElementById('api-key-input');
+    const providerSelect = document.getElementById('ai-provider-select');
+    if (keyInput) keyInput.value = savedKey;
+    if (providerSelect) { providerSelect.value = savedProvider; onProviderChange(); }
+})();
+
+function toggleKeyVisibility() {
+    const inp = document.getElementById('api-key-input');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function getApiKey() {
+    const inp = document.getElementById('api-key-input');
+    const key = (inp ? inp.value.trim() : '') || localStorage.getItem(AI_KEY_STORAGE) || '';
+    if (inp && inp.value.trim()) localStorage.setItem(AI_KEY_STORAGE, inp.value.trim());
+    return key;
+}
+
+function getProvider() {
+    const sel = document.getElementById('ai-provider-select');
+    const p = (sel ? sel.value : '') || localStorage.getItem(AI_PROVIDER_STORAGE) || 'gemini';
+    return p;
+}
+
+function onProviderChange() {
+    const p = getProvider();
+    const label = document.getElementById('api-key-label');
+    const hint = document.getElementById('api-key-hint');
+    const sel = document.getElementById('ai-provider-select');
+    if (sel) localStorage.setItem(AI_PROVIDER_STORAGE, sel.value);
+    const configs = {
+        groq: {
+            label: 'Chave de API (Groq Cloud) — Recomendado',
+            hint: '⚡ Gratuito e ultra-rápido (~1s): <a href="https://console.groq.com/keys" target="_blank" style="color:var(--accent)">console.groq.com</a> — Cadastre-se, crie uma chave e cole aqui. Sem limite de cota diária relevante para uso médico.'
+        },
+        gemini: {
+            label: 'Chave de API (Google AI Studio)',
+            hint: '⚠️ Cota limitada: 15 req/min e 1500 req/dia no plano gratuito. Se receber erro de cota, aguarde ou troque para Groq. Obtenha em: <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com</a>'
+        },
+        anthropic: {
+            label: 'Chave de API (Anthropic)',
+            hint: '💳 Pago (melhor qualidade): <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--accent)">console.anthropic.com</a> — Claude Haiku, ~$0.001 por laudo.'
+        }
+    };
+    const cfg = configs[p] || configs.groq;
+    if (label) label.textContent = cfg.label;
+    if (hint) hint.innerHTML = cfg.hint;
+}
+
+// ── CALL AI (Gemini / Groq / Anthropic) ──────────────
+async function callAI(systemPrompt, userText) {
+    const key = getApiKey();
+    const provider = getProvider();
+
+    if (!key) throw new Error('NO_KEY');
+
+    if (provider === 'gemini') {
+        // Tenta gemini-2.0-flash primeiro, cai para 1.5-flash se falhar
+        const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-latest'];
+        let lastErr = null;
+        for (const model of models) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+            try {
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        system_instruction: { parts: [{ text: systemPrompt }] },
+                        contents: [{ role: 'user', parts: [{ text: userText }] }],
+                        generationConfig: { temperature: 0.1, maxOutputTokens: 1024 }
+                    })
+                });
+                const data = await resp.json();
+                if (!resp.ok) {
+                    // Se for "not found", tenta próximo modelo
+                    const errMsg = data.error?.message || `HTTP ${resp.status}`;
+                    if (resp.status === 404 || errMsg.toLowerCase().includes('not found')) {
+                        lastErr = new Error(errMsg);
+                        continue;
+                    }
+                    throw new Error(errMsg);
+                }
+                const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!text) throw new Error('Resposta vazia da API Gemini.');
+                return text;
+            } catch(e) {
+                if (e.message.toLowerCase().includes('not found') || e.message.includes('404')) {
+                    lastErr = e; continue;
+                }
+                throw e;
+            }
+        }
+        throw lastErr || new Error('Nenhum modelo Gemini disponível. Verifique sua chave.');
+    }
+
+    if (provider === 'groq') {
+        // Modelos Groq atuais (março 2026) — tenta em ordem até um funcionar
+        const groqModels = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'];
+        let lastErr = null;
+        for (const model of groqModels) {
+            try {
+                const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+                    body: JSON.stringify({
+                        model,
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: userText }
+                        ],
+                        temperature: 0.1, max_tokens: 1024
+                    })
+                });
+                const data = await resp.json();
+                if (!resp.ok) {
+                    const errMsg = data.error?.message || `HTTP ${resp.status}`;
+                    // Se modelo foi descontinuado ou não encontrado, tenta próximo
+                    if (errMsg.toLowerCase().includes('decommission') || errMsg.toLowerCase().includes('not found') || resp.status === 404 || errMsg.includes('does not exist')) {
+                        lastErr = new Error(errMsg); continue;
+                    }
+                    throw new Error(errMsg);
+                }
+                const text = data.choices?.[0]?.message?.content;
+                if (!text) throw new Error('Resposta vazia do Groq.');
+                return text;
+            } catch(e) {
+                if (e.message.toLowerCase().includes('decommission') || e.message.toLowerCase().includes('not found') || e.message.includes('does not exist')) {
+                    lastErr = e; continue;
+                }
+                throw e;
+            }
+        }
+        throw lastErr || new Error('Nenhum modelo Groq disponível. Verifique sua chave.');
+    }
+
+    if (provider === 'anthropic') {
+        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': key,
+                'anthropic-version': '2023-06-01',
+                'anthropic-dangerous-direct-browser-access': 'true'
+            },
+            body: JSON.stringify({
+                model: 'claude-haiku-4-5-20251001',
+                max_tokens: 1024,
+                system: systemPrompt,
+                messages: [{ role: 'user', content: userText }]
+            })
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.error?.message || `HTTP ${resp.status}`);
+        }
+        const data = await resp.json();
+        return data.content?.map(b => b.text || '').join('') || '';
+    }
+
+    throw new Error('Provedor desconhecido');
+}
+
+// ── DIFF PROFISSIONAL (jsdiff) ────────────────────────
+function buildDiffHTML(original, corrected) {
+    // Use jsdiff word-level diff if available
+    if (typeof Diff !== 'undefined') {
+        const parts = Diff.diffWords(original, corrected);
+        return parts.map(part => {
+            if (part.added)   return `<ins>${esc(part.value)}</ins>`;
+            if (part.removed) return `<del>${esc(part.value)}</del>`;
+            return esc(part.value);
+        }).join('');
+    }
+    // Fallback manual diff
+    const oW = original.split(/\s+/), cW = corrected.split(/\s+/);
+    let r = '', oi = 0, ci = 0;
+    while (oi < oW.length || ci < cW.length) {
+        const ow = oW[oi]||'', cw = cW[ci]||'';
+        if (ow === cw) { r += esc(ow)+' '; oi++; ci++; }
+        else {
+            let found = false;
+            for (let a=1; a<=5; a++) {
+                if (cW[ci+a]===ow) { for(let x=0;x<a;x++) r+=`<ins>${esc(cW[ci+x])}</ins> `; ci+=a; found=true; break; }
+                if (oW[oi+a]===cw) { for(let x=0;x<a;x++) r+=`<del>${esc(oW[oi+x])}</del> `; oi+=a; found=true; break; }
+            }
+            if (!found) { if(ow) r+=`<del>${esc(ow)}</del> `; if(cw) r+=`<ins>${esc(cw)}</ins> `; oi++; ci++; }
+        }
+    }
+    return r.trim();
+}
+
+// ── REVISÃO GRAMATICAL (Gemini / Groq / Anthropic) ────
+const btnReview = document.getElementById('btn-review');
+const reviewPanel = document.getElementById('review-panel');
+const reviewDiff = document.getElementById('review-diff');
+const reviewNote = document.getElementById('review-note');
+let correctedText = '';
+let originalForReview = '';
+
+const REVIEW_SYSTEM = `Você é um revisor especializado em laudos médicos de radiologia em português brasileiro.
+Sua única tarefa: corrigir erros de gramática, concordância verbal/nominal e ortografia geral.
+Regras obrigatórias:
+- NUNCA altere terminologia médica, siglas (TC, RM, HU, BIRADS, etc.) ou abreviações técnicas.
+- NUNCA altere o significado clínico, a ordem das frases ou o estilo do laudo.
+- NUNCA adicione texto novo ou remova informações.
+- Corrija apenas o que está claramente errado em português.
+Retorne SOMENTE o texto corrigido, sem explicações, comentários ou markdown.`;
+
+btnReview.onclick = async () => {
+    const original = editor.innerText.trim();
+    if (!original) { showToast('Editor está vazio', '#ef4444'); return; }
+
+    const key = getApiKey();
+    if (!key) {
+        showToast('Configure sua chave de API em ⚙️ Gerenciar', '#f59e0b');
+        // Switch to gerenciar tab
+        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+        document.querySelector('[data-tab="gerenciar"]').classList.add('active');
+        document.getElementById('tab-gerenciar').classList.add('active');
+        return;
+    }
+
+    btnReview.classList.add('loading');
+    closeReview();
+
+    try {
+        const corrected = await callAI(REVIEW_SYSTEM, original);
+
+        if (!corrected || corrected.trim() === original.trim()) {
+            reviewDiff.innerHTML = `<span style="color:#475569;font-style:italic">✓ Nenhuma correção necessária — texto já está gramaticalmente correto.</span>`;
+            reviewNote.textContent = '';
+            reviewPanel.querySelector('.review-actions').style.display = 'none';
+            reviewPanel.classList.add('show');
+            showToast('Texto sem erros ✓', '#10b981');
+            return;
+        }
+
+        correctedText = corrected.trim();
+        originalForReview = original;
+        document.getElementById('review-panel-title').textContent = '✦ Revisão Gramatical — Sugestões';
+        reviewDiff.innerHTML = buildDiffHTML(original, correctedText);
+
+        // Count changed words for summary
+        let changes = 0;
+        if (typeof Diff !== 'undefined') {
+            changes = Diff.diffWords(original, correctedText).filter(p => p.added || p.removed).length;
+        }
+        reviewNote.innerHTML = changes > 0
+            ? `📝 ${Math.ceil(changes/2)} alteração(ões) sugerida(s) pelo ${getProvider() === 'gemini' ? 'Gemini' : getProvider() === 'groq' ? 'Groq/Llama' : 'Claude'}. Revise antes de aplicar.`
+            : '📝 Pequenas correções sugeridas. Revise antes de aplicar.';
+
+        reviewPanel.querySelector('.review-actions').style.display = 'flex';
+        reviewPanel.classList.add('show');
+        showToast('Revisão concluída ✓', '#a855f7');
+
+    } catch(e) {
+        let msg = e.message || 'falha';
+        if (msg === 'NO_KEY') msg = 'Chave de API não configurada. Acesse ⚙️ Gerenciar.';
+        else if (msg.includes('quota') || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) msg = 'Cota esgotada. Troque para Groq em ⚙️ Gerenciar — é gratuito e sem limite relevante.';
+        else if (msg.includes('API_KEY_INVALID') || msg.includes('401') || msg.includes('403')) msg = 'Chave inválida ou sem permissão. Verifique em ⚙️ Gerenciar.';
+        else if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('Load failed')) msg = 'Sem conexão com a internet.';
+        else if (msg.includes('not found') || msg.includes('404')) msg = 'Modelo não encontrado. Tente outro provedor em ⚙️ Gerenciar.';
+        showToast('Erro: ' + msg, '#ef4444');
+        console.error('[RadioScribe Review]', e);
+    } finally {
+        btnReview.classList.remove('loading');
+    }
+};
+
+// ── GERAR CONCLUSÃO (mesma IA) ────────────────────────
+const btnConclude = document.getElementById('btn-conclude');
+
+const CONCLUDE_SYSTEM = `Você é um médico radiologista experiente em laudos em português brasileiro.
+Com base nos achados descritos no corpo do laudo fornecido, escreva APENAS a conclusão/impressão diagnóstica.
+Regras:
+- Seja direto, técnico e conciso.
+- Não repita os achados — apenas sintetize o que é clinicamente relevante.
+- Comece com "CONCLUSÃO:" seguido da conclusão em 1 a 4 frases.
+- Não adicione explicações, sugestões ou texto além da conclusão.`;
+
+async function generateConclusion() {
+    const bodyText = editor.innerText.trim();
+    if (!bodyText) { showToast('Editor está vazio', '#ef4444'); return; }
+
+    const key = getApiKey();
+    if (!key) {
+        showToast('Configure sua chave de API em ⚙️ Gerenciar', '#f59e0b');
+        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+        document.querySelector('[data-tab="gerenciar"]').classList.add('active');
+        document.getElementById('tab-gerenciar').classList.add('active');
+        return;
+    }
+
+    const concludeLabel = btnConclude.querySelector('.conclude-label');
+    const concludeSpin = btnConclude.querySelector('.spin');
+    btnConclude.classList.add('loading');
+    concludeLabel.style.display = 'none';
+    concludeSpin.style.display = 'block';
+
+    try {
+        const conclusion = await callAI(CONCLUDE_SYSTEM, bodyText);
+        document.getElementById('review-panel-title').textContent = '✦ Conclusão Gerada por IA';
+        reviewDiff.innerHTML = `<div style="white-space:pre-wrap;font-size:.9rem;line-height:1.8;color:#1e293b">${esc(conclusion.trim())}</div>`;
+        reviewNote.textContent = 'Revise e clique em Aplicar para inserir ao final do laudo.';
+        correctedText = '\n\n' + conclusion.trim();
+        reviewPanel.querySelector('.review-actions').style.display = 'flex';
+        reviewPanel.classList.add('show');
+        showToast('Conclusão gerada ✓', '#a855f7');
+    } catch(e) {
+        let msg = e.message || 'falha';
+        if (msg === 'NO_KEY') msg = 'Chave de API não configurada. Acesse ⚙️ Gerenciar.';
+        else if (msg.includes('quota') || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) msg = 'Cota esgotada. Troque para Groq em ⚙️ Gerenciar — é gratuito e sem limite relevante.';
+        else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) msg = 'Sem conexão com a internet.';
+        else if (msg.includes('not found') || msg.includes('404')) msg = 'Modelo não encontrado. Tente outro provedor em ⚙️ Gerenciar.';
+        else if (msg.includes('401') || msg.includes('403')) msg = 'Chave inválida ou sem permissão. Verifique em ⚙️ Gerenciar.';
+        showToast('Erro: ' + msg, '#ef4444');
+        console.error('[RadioScribe Conclusão]', e);
+    } finally {
+        btnConclude.classList.remove('loading');
+        concludeLabel.style.display = '';
+        concludeSpin.style.display = 'none';
+    }
+}
+
+// ── APPLY REVIEW ──────────────────────────────────────
+function applyReview() {
+    if (!correctedText) return;
+    const isConclusion = correctedText.startsWith('\n\n');
+    if (isConclusion) {
+        const lines = correctedText.trimStart().split('\n');
+        editor.appendChild(document.createElement('br'));
+        lines.forEach((line, i) => {
+            if (i > 0) editor.appendChild(document.createElement('br'));
+            editor.appendChild(document.createTextNode(line));
+        });
+        document.getElementById('review-panel-title').textContent = '✦ Revisão Gramatical — Sugestões';
+    } else {
+        editor.innerHTML = '';
+        correctedText.split('\n').forEach((line, i) => {
+            if (i > 0) editor.appendChild(document.createElement('br'));
+            editor.appendChild(document.createTextNode(line));
+        });
+    }
+    closeReview();
+    autosave();
+    showToast('Aplicado ✓', '#a855f7');
+}
+
+function closeReview() {
+    reviewPanel.classList.remove('show');
+    correctedText = '';
+    originalForReview = '';
+    document.getElementById('review-panel-title').textContent = '✦ Revisão Gramatical — Sugestões';
+}
+
+// ── EXPORT HTML (embed key + data) ────────────────────
+function exportHTML() {
+    // Save key to localStorage before exporting
+    const key = getApiKey();
+    const provider = getProvider();
+
+    let src = document.documentElement.outerHTML;
+
+    // Embed formulas + alternativas
+    const m1 = 'const defaultFormulas = ', m2 = 'const defaultAlternativas = ';
+    const i1 = src.indexOf(m1);
+    if (i1 !== -1) {
+        const between_marker = src.indexOf(m2, i1);
+        const e2 = src.indexOf(';\n\n// ── STATE', between_marker);
+        const part1 = src.substring(0, i1);
+        const part2 = src.substring(e2);
+        src = part1 + m1 + JSON.stringify(formulas, null, 4) + ';\n\n' + m2 + JSON.stringify(alternativas, null, 4) + part2;
+    }
+
+    // Embed API key and provider into localStorage init code
+    // Insert a startup script right after <script> tag
+    const embedScript = `\n// ── EMBEDDED SETTINGS (saved by exportHTML) ──────────\n(function(){ localStorage.setItem('${AI_KEY_STORAGE}',${JSON.stringify(key)}); localStorage.setItem('${AI_PROVIDER_STORAGE}',${JSON.stringify(provider)}); })();\n`;
+    src = src.replace('<script>\n// ── DADOS PADRÃO', '<script>' + embedScript + '\n// ── DADOS PADRÃO');
+
+    const blob = new Blob([src], { type: 'text/html;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'radioscribe-pro.html';
+    a.click();
+    showToast('HTML salvo com todos os dados ✓', '#10b981');
+}
+
+// ── SPEECH — MODO DUPLO: Chrome STT + Groq Whisper ────
+const btnToggle  = document.getElementById('btn-toggle');
+const btnText    = document.getElementById('btn-text');
+const btnClear   = document.getElementById('btn-clear');
+const btnCut     = document.getElementById('btn-cut');
+const statusBadge= document.getElementById('status-badge');
+const whisperBadge = document.getElementById('whisper-badge');
+const volMeter   = document.getElementById('vol-meter');
+
+let isListening   = false;
+let whisperMode   = false;  // false = Chrome STT, true = Groq Whisper
+let mediaRecorder = null;
+let audioChunks   = [];
+let audioStream   = null;
+let analyser      = null;
+let volAnimFrame  = null;
+
+// ── Carregar preferência de modo ──────────────────────
+whisperMode = localStorage.getItem('rs_whisper_mode') === '1';
+updateWhisperBadge();
+
+function updateWhisperBadge() {
+    whisperBadge.className = 'whisper-badge ' + (whisperMode ? 'on' : 'off');
+    whisperBadge.title = whisperMode
+        ? 'Groq Whisper ATIVO — clique para voltar ao Chrome STT'
+        : 'Modo Chrome STT — clique para ativar Groq Whisper (mais preciso em termos médicos)';
+    if (whisperMode) {
+        btnText.innerText = 'Iniciar Ditado';
+        document.getElementById('icon').innerText = '🟣';
+    } else {
+        btnText.innerText = 'Iniciar Ditado';
+        document.getElementById('icon').innerText = '🎙️';
+    }
+}
+
+function toggleWhisperMode() {
+    whisperMode = !whisperMode;
+    localStorage.setItem('rs_whisper_mode', whisperMode ? '1' : '0');
+    updateWhisperBadge();
+    showToast(whisperMode
+        ? 'Groq Whisper ativado — segure o botão para gravar'
+        : 'Chrome STT ativado — clique para iniciar ditado contínuo',
+        whisperMode ? '#7c3aed' : '#3b82f6');
+}
+
+// ── Volume meter animation ─────────────────────────────
+function startVolMeter(stream) {
+    volMeter.classList.add('show');
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = ctx.createMediaStreamSource(stream);
+    analyser = ctx.createAnalyser();
+    analyser.fftSize = 32;
+    src.connect(analyser);
+    const buf = new Uint8Array(analyser.frequencyBinCount);
+    const bars = [
+        document.getElementById('vb1'), document.getElementById('vb2'),
+        document.getElementById('vb3'), document.getElementById('vb4'),
+        document.getElementById('vb5')
+    ];
+    function draw() {
+        analyser.getByteFrequencyData(buf);
+        const avg = buf.reduce((a,b)=>a+b,0)/buf.length;
+        bars.forEach((b,i) => {
+            const h = Math.max(3, (buf[i*2]||avg) / 255 * 28);
+            b.style.height = h + 'px';
+        });
+        volAnimFrame = requestAnimationFrame(draw);
+    }
+    draw();
+}
+
+function stopVolMeter() {
+    volMeter.classList.remove('show');
+    if (volAnimFrame) { cancelAnimationFrame(volAnimFrame); volAnimFrame = null; }
+    const bars = ['vb1','vb2','vb3','vb4','vb5'];
+    bars.forEach(id => { const b=document.getElementById(id); if(b) b.style.height='4px'; });
+}
+
+// ── MODO CHROME STT ────────────────────────────────────
+let recognition;
+if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SR();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'pt-BR';
+
+    recognition.onstart = () => {
+        isListening = true;
+        btnText.innerText = 'Gravando...';
+        document.getElementById('icon').innerText = '⏹️';
+        btnToggle.classList.add('recording');
+        editor.classList.add('recording');
+        statusBadge.innerText = '● LIVE';
+        statusBadge.classList.add('live');
+    };
+    recognition.onend = () => {
+        isListening = false;
+        btnText.innerText = 'Iniciar Ditado';
+        document.getElementById('icon').innerText = '🎙️';
+        btnToggle.classList.remove('recording');
+        editor.classList.remove('recording');
+        statusBadge.innerText = 'STANDBY';
+        statusBadge.classList.remove('live');
+    };
+    recognition.onerror = e => { if (e.error !== 'aborted') showToast('Erro STT: ' + e.error, '#ef4444'); };
+    recognition.onresult = event => {
+        let final = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+                let t = event.results[i][0].transcript.toLowerCase().trim();
+
+                // ── Comandos especiais (tratados antes do NLP) ──────
+                // Próximo campo
+                if (t === 'próximo campo' || t === 'proximo campo') {
+                    jumpNextField(); continue;
+                }
+                // Apagar último trecho ditado
+                if (t === 'apagar' || t === 'deletar') {
+                    deleteLastInserted(); continue;
+                }
+                // Apagar última palavra
+                if (t === 'apagar palavra' || t === 'deletar palavra' || t === 'apagar a última palavra') {
+                    deleteLastWord(); continue;
+                }
+                // Apagar tudo
+                if (t === 'apagar tudo' || t === 'limpar tudo' || t === 'deletar tudo') {
+                    if (confirm('Apagar todo o texto?')) {
+                        editor.innerHTML = '';
+                        localStorage.removeItem(DRAFT_KEY);
+                        lastSaved = ''; setAutosaveStatus('');
+                    }
+                    continue;
+                }
+                // Novo parágrafo / enter
+                if (t === 'enter' || t === 'nova linha' || t === 'pular linha') {
+                    insertText('\n'); continue;
+                }
+
+                // ── Aplicar substituições NLP ───────────────────────
+                // Ordena por tamanho decrescente para evitar substituições parciais
+                const keys = Object.keys(medicalNLP).sort((a,b) => b.length - a.length);
+                keys.forEach(k => {
+                    t = t.replace(new RegExp(`\\b${k}\\b`, 'gi'), medicalNLP[k]);
+                });
+
+                // ── Smart capitalize após pontuação ─────────────────
+                t = t.replace(/(^|[.!?]\s+)([a-záàâãéèêíïóôõöúüç])/g, (m,p1,p2) => p1 + p2.toUpperCase());
+
+                final += t + ' ';
+            }
+        }
+        if (final) {
+            if (!editor.innerText.trim()) final = final.charAt(0).toUpperCase() + final.slice(1);
+            const inserted = final.trimEnd() + ' ';
+            lastInsertedText = inserted;
+            insertText(inserted);
+        }
+    };
+}
+
+// ── MODO GROQ WHISPER ──────────────────────────────────
+async function startWhisperRecording() {
+    const key = getApiKey();
+    if (!key) {
+        showToast('Configure a chave Groq em ⚙️ Gerenciar', '#f59e0b');
+        return;
+    }
+    // Verificar se é Groq (Whisper só funciona com Groq neste modo)
+    if (getProvider() !== 'groq') {
+        showToast('Whisper usa a chave Groq — selecione Groq em ⚙️ Gerenciar', '#f59e0b');
+        return;
+    }
+    try {
+        audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioChunks = [];
+
+        // Escolher formato compatível
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+            ? 'audio/webm;codecs=opus'
+            : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+
+        mediaRecorder = new MediaRecorder(audioStream, { mimeType });
+        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+        mediaRecorder.start(100);
+
+        startVolMeter(audioStream);
+        isListening = true;
+        btnToggle.classList.add('whisper-recording');
+        editor.classList.add('recording');
+        btnText.innerText = 'Gravando... (clique p/ parar)';
+        document.getElementById('icon').innerText = '⏹️';
+        statusBadge.innerText = '● WHISPER';
+        statusBadge.classList.add('live');
+    } catch(e) {
+        showToast('Erro ao acessar microfone: ' + e.message, '#ef4444');
+    }
+}
+
+async function stopWhisperRecording() {
+    if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
+    isListening = false;
+
+    return new Promise(resolve => {
+        mediaRecorder.onstop = async () => {
+            stopVolMeter();
+            btnToggle.classList.remove('whisper-recording');
+            btnToggle.classList.add('transcribing');
+            editor.classList.remove('recording');
+            btnText.innerText = 'Transcrevendo...';
+            document.getElementById('icon').innerText = '⏳';
+            statusBadge.innerText = '⏳ PROCESSANDO';
+
+            // Parar tracks do microfone
+            if (audioStream) audioStream.getTracks().forEach(t => t.stop());
+
+            try {
+                const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+
+                // Verificar duração mínima
+                if (audioBlob.size < 4000) {
+                    showToast('Gravação muito curta — fale por pelo menos 1 segundo', '#f59e0b');
+                    return;
+                }
+
+                const key = getApiKey();
+                if (!key) {
+                    showToast('Configure a chave Groq em ⚙️ Gerenciar', '#f59e0b');
+                    return;
+                }
+
+                const formData = new FormData();
+                // Groq Whisper aceita: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, webm
+                // Chrome grava em webm, Firefox em ogg
+                const mimeType = mediaRecorder.mimeType;
+                let ext = 'webm';
+                if (mimeType.includes('ogg'))  ext = 'ogg';
+                if (mimeType.includes('mp4'))  ext = 'mp4';
+                if (mimeType.includes('wav'))  ext = 'wav';
+
+                formData.append('file', audioBlob, `audio.${ext}`);
+                formData.append('model', 'whisper-large-v3');
+                formData.append('language', 'pt');
+                formData.append('response_format', 'json');
+                formData.append('prompt', 'Laudo radiológico em português brasileiro. Termos técnicos: T1, T2, FLAIR, BIRADS, TC, RM, HU, ecogênico, hiperecogênico, hipoecogênico, anecóico, parênquima, ecogenicidade, pielocalicial, uropatia, nefrolitíase, colelitíase, vesícula, colédoco, pâncreas, esplenomegalia, hepatopatia, esteatose, hemangioma, miomatose, endométrio, miométrio, próstata, adenoma, linfonodo, retroperitônio, aorta, aneurisma, mediastino, derrame, consolidação.');
+
+                console.log('[Whisper] Enviando áudio:', ext, audioBlob.size, 'bytes, mimeType:', mimeType);
+
+                const resp = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${key}` },
+                    body: formData
+                });
+
+                // Capturar resposta raw para debug
+                const respText = await resp.text();
+                console.log('[Whisper] Resposta HTTP', resp.status, ':', respText.substring(0, 300));
+
+                if (!resp.ok) {
+                    let errMsg = `HTTP ${resp.status}`;
+                    try {
+                        const errJson = JSON.parse(respText);
+                        errMsg = errJson.error?.message || errJson.message || errMsg;
+                    } catch(e) {}
+                    throw new Error(errMsg);
+                }
+
+                const data = JSON.parse(respText);
+                let text = (data.text || '').trim();
+
+                if (!text) { showToast('Nenhuma fala detectada', '#64748b'); return; }
+
+                // Aplicar NLP médico (ordenado por tamanho para evitar substituições parciais)
+                const keys = Object.keys(medicalNLP).sort((a,b) => b.length - a.length);
+                keys.forEach(k => {
+                    text = text.replace(new RegExp(`\\b${k}\\b`, 'gi'), medicalNLP[k]);
+                });
+
+                // Smart capitalize após pontuação
+                text = text.replace(/(^|[.!?]\s+)([a-záàâãéèêíïóôõöúüç])/g, (m,p1,p2) => p1 + p2.toUpperCase());
+
+                // Capitalizar início
+                if (!editor.innerText.trim()) text = text.charAt(0).toUpperCase() + text.slice(1);
+                if (!text.endsWith(' ')) text += ' ';
+
+                lastInsertedText = text;
+                insertText(text);
+                showToast('✓ Transcrito pelo Whisper', '#7c3aed');
+
+            } catch(e) {
+                let msg = e.message || 'falha desconhecida';
+                console.error('[Whisper] Erro:', msg);
+                if (msg.includes('401') || msg.includes('invalid_api_key') || msg.includes('Invalid API Key')) {
+                    msg = 'Chave Groq inválida ou expirada. Crie uma nova em console.groq.com/keys e atualize em ⚙️ Gerenciar.';
+                } else if (msg.includes('403')) {
+                    msg = 'Sem permissão. Verifique se a chave Groq tem acesso à API de áudio.';
+                } else if (msg.includes('429')) {
+                    msg = 'Limite de requisições atingido. Aguarde alguns segundos.';
+                } else if (msg.includes('400')) {
+                    msg = 'Formato de áudio não suportado (HTTP 400). Tente gravar por mais tempo.';
+                } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('Load failed')) {
+                    msg = 'Sem conexão com a internet.';
+                } else if (msg.length > 120) {
+                    msg = msg.substring(0, 120) + '...';
+                }
+                showToast('Whisper: ' + msg, '#ef4444');
+            } finally {
+                btnToggle.classList.remove('transcribing');
+                btnText.innerText = 'Iniciar Ditado';
+                document.getElementById('icon').innerText = '🟣';
+                statusBadge.innerText = 'STANDBY';
+                statusBadge.classList.remove('live');
+                resolve();
+            }
+        };
+        mediaRecorder.stop();
+    });
+}
+
+// ── BOTÃO PRINCIPAL — comportamento duplo ──────────────
+btnToggle.addEventListener('click', () => {
+    if (whisperMode) {
+        // Modo Whisper: clique para iniciar, clique de novo para parar
+        if (isListening) {
+            stopWhisperRecording();
+        } else {
+            startWhisperRecording();
+        }
+    } else {
+        // Modo Chrome STT: clique para ligar/desligar contínuo
+        if (!recognition) { showToast('Reconhecimento de voz não suportado', '#ef4444'); return; }
+        if (isListening) recognition.stop(); else recognition.start();
+    }
+});
+
+btnClear.onclick=()=>{
+    if(confirm('Apagar todo o texto?')){
+        editor.innerHTML=''; closeReview();
+        localStorage.removeItem(DRAFT_KEY);
+        lastSaved=''; setAutosaveStatus('');
+        showToast('Editor limpo','#64748b');
+    }
+};
+
+// Keyboard shortcut: Tab → jump next field
+editor.addEventListener('keydown', e => {
+    if (e.key === 'Tab') { e.preventDefault(); jumpNextField(); }
+});
+
+// ── COPIAR ─────────────────────────────────────────────
+const btnCopy = document.getElementById('btn-copy');
+btnCopy.onclick = () => {
+    const text = editor.innerText.trim(); if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+        btnCopy.innerHTML = '✅ Copiado!';
+        setTimeout(() => { btnCopy.innerHTML = '📋 Copiar'; }, 1500);
+        showToast('Texto copiado ✓', '#0891b2');
+    }).catch(() => showToast('Erro ao copiar', '#ef4444'));
+};
+
+// ── CORTAR ─────────────────────────────────────────────
+btnCut.onclick=()=>{
+    const text=editor.innerText.trim(); if(!text)return;
+    navigator.clipboard.writeText(text).then(()=>{
+        btnCut.innerHTML='✅ Copiado!';
+        setTimeout(()=>{
+            editor.innerHTML=''; closeReview();
+            localStorage.removeItem(DRAFT_KEY); lastSaved=''; setAutosaveStatus('');
+            btnCut.innerHTML='✂️ Cortar';
+            if(!whisperMode && isListening){ recognition.stop(); setTimeout(()=>recognition.start(),400); }
+            showToast('Copiado e editor limpo ✓');
+        },800);
+    }).catch(()=>showToast('Erro ao copiar','#ef4444'));
+};
+
+// ── GITHUB SYNC ───────────────────────────────────────
+const GH_TOKEN_KEY = 'rs_gh_token';
+const GH_REPO_KEY  = 'rs_gh_repo';
+const GH_GIST_ID_KEY = 'rs_gh_gist_id'; // ID do gist salvo
+
+// Carregar configurações salvas do GitHub Sync
+(function loadGhSettings() {
+    const t = localStorage.getItem(GH_TOKEN_KEY);
+    const ti = document.getElementById('gh-token-input');
+    if (t && ti) ti.value = t;
+})();
+
+function toggleGhToken() {
+    const inp = document.getElementById('gh-token-input');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function getGhCredentials() {
+    const token = document.getElementById('gh-token-input')?.value.trim();
+    if (token) localStorage.setItem(GH_TOKEN_KEY, token);
+    return { token };
+}
+
+function setGhSpinner(op, loading) {
+    const label = document.getElementById(`gh-${op}-label`);
+    const spin  = document.getElementById(`gh-${op}-spin`);
+    if (label) label.style.display = loading ? 'none' : '';
+    if (spin)  spin.style.display  = loading ? 'inline-block' : 'none';
+}
+
+// ── GITHUB GIST SYNC ───────────────────────────────────
+// Usa Gist secreto em vez de arquivo no repositório.
+// Gists NÃO passam por secret scanning — solução definitiva.
+
+function buildSyncPayload() {
+    return {
+        version: '3.2',
+        saved_at: new Date().toISOString(),
+        ai_provider: getProvider(),
+        ai_key: getApiKey(),
+        formulas: formulas,
+        alternativas: alternativas
+    };
+}
+
+function applyLoadedConfig(cfg) {
+    if (cfg.formulas     && Object.keys(cfg.formulas).length > 0)     formulas     = cfg.formulas;
+    if (cfg.alternativas && Object.keys(cfg.alternativas).length > 0) alternativas = cfg.alternativas;
+    if (cfg.ai_provider) {
+        localStorage.setItem(AI_PROVIDER_STORAGE, cfg.ai_provider);
+        const sel = document.getElementById('ai-provider-select');
+        if (sel) { sel.value = cfg.ai_provider; onProviderChange(); }
+    }
+    if (cfg.ai_key) {
+        localStorage.setItem(AI_KEY_STORAGE, cfg.ai_key);
+        const inp = document.getElementById('api-key-input');
+        if (inp) inp.value = cfg.ai_key;
+    }
+    saveToLocalStorage();
+    refreshAll();
+}
+
+// Salvar config como Gist secreto
+async function githubSave() {
+    const { token } = getGhCredentials();
+    if (!token) { showToast('Cole seu GitHub Token em ⚙️ Gerenciar', '#ef4444'); return; }
+
+    setGhSpinner('save', true);
+    try {
+        const payload = JSON.stringify(buildSyncPayload(), null, 2);
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28'
+        };
+
+        const existingGistId = localStorage.getItem(GH_GIST_ID_KEY);
+        let resp;
+
+        if (existingGistId) {
+            // Atualizar gist existente (PATCH)
+            resp = await fetch(`https://api.github.com/gists/${existingGistId}`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify({
+                    description: 'RadioScribe Pro — configurações',
+                    files: { 'radioscribe-config.json': { content: payload } }
+                })
+            });
+        } else {
+            // Criar novo gist secreto (POST)
+            resp = await fetch('https://api.github.com/gists', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    description: 'RadioScribe Pro — configurações',
+                    public: false,
+                    files: { 'radioscribe-config.json': { content: payload } }
+                })
+            });
+        }
+
+        if (!resp.ok) {
+            const err = await resp.json().catch(()=>({}));
+            throw new Error(err.message || `HTTP ${resp.status}`);
+        }
+
+        const data = await resp.json();
+        localStorage.setItem(GH_GIST_ID_KEY, data.id);
+        showToast('☁️ Configurações salvas no GitHub ✓', '#10b981');
+        console.log('[RadioScribe] Gist salvo:', data.id);
+
+    } catch(e) {
+        let msg = e.message || 'falha';
+        if (msg.includes('401') || msg.includes('Bad credentials')) msg = 'Token inválido. Crie um novo em github.com/settings/tokens';
+        else if (msg.includes('403')) msg = 'Token sem permissão. Marque "gist" ao criar o token.';
+        else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) msg = 'Sem conexão com a internet.';
+        showToast('Erro GitHub: ' + msg, '#ef4444');
+    } finally {
+        setGhSpinner('save', false);
+    }
+}
+
+// Carregar config do Gist
+async function githubLoad() {
+    const { token } = getGhCredentials();
+    if (!token) { showToast('Cole seu GitHub Token em ⚙️ Gerenciar', '#ef4444'); return; }
+
+    setGhSpinner('load', true);
+    try {
+        const gistId = localStorage.getItem(GH_GIST_ID_KEY);
+        let cfg = null;
+
+        if (gistId) {
+            // Carregar gist pelo ID salvo
+            const resp = await fetch(`https://api.github.com/gists/${gistId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/vnd.github+json',
+                    'X-GitHub-Api-Version': '2022-11-28'
+                }
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                const content = data.files?.['radioscribe-config.json']?.content;
+                if (content) cfg = JSON.parse(content);
+            }
+        }
+
+        if (!cfg) {
+            // Buscar entre os gists do usuário
+            const resp = await fetch('https://api.github.com/gists', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/vnd.github+json',
+                    'X-GitHub-Api-Version': '2022-11-28'
+                }
+            });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const gists = await resp.json();
+            const found = gists.find(g => g.files?.['radioscribe-config.json']);
+            if (!found) throw new Error('Nenhum gist RadioScribe encontrado. Clique em "Salvar na Nuvem" primeiro.');
+            localStorage.setItem(GH_GIST_ID_KEY, found.id);
+
+            const resp2 = await fetch(`https://api.github.com/gists/${found.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/vnd.github+json',
+                    'X-GitHub-Api-Version': '2022-11-28'
+                }
+            });
+            const data2 = await resp2.json();
+            const content = data2.files?.['radioscribe-config.json']?.content;
+            if (!content) throw new Error('Conteúdo do gist vazio.');
+            cfg = JSON.parse(content);
+        }
+
+        applyLoadedConfig(cfg);
+        const dt = cfg.saved_at ? new Date(cfg.saved_at).toLocaleString('pt-BR') : '';
+        showToast(`☁️ Configurações carregadas ✓ ${dt ? '('+dt+')' : ''}`, '#10b981');
+
+    } catch(e) {
+        let msg = e.message || 'falha';
+        if (msg.includes('401') || msg.includes('Bad credentials')) msg = 'Token inválido.';
+        else if (msg.includes('403')) msg = 'Token sem permissão de gist.';
+        else if (msg.includes('Failed to fetch')) msg = 'Sem conexão com a internet.';
+        showToast('Erro GitHub: ' + msg, '#ef4444');
+    } finally {
+        setGhSpinner('load', false);
+    }
+}
+
+// Auto-carregar do Gist na inicialização
+async function autoLoadFromGithub() {
+    const token = localStorage.getItem(GH_TOKEN_KEY);
+    const gistId = localStorage.getItem(GH_GIST_ID_KEY);
+    if (!token || !gistId) return false;
+
+    try {
+        const resp = await fetch(`https://api.github.com/gists/${gistId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/vnd.github+json',
+                'X-GitHub-Api-Version': '2022-11-28'
+            }
+        });
+        if (!resp.ok) return false;
+
+        const data = await resp.json();
+        const content = data.files?.['radioscribe-config.json']?.content;
+        if (!content) return false;
+
+        const cfg = JSON.parse(content);
+        applyLoadedConfig(cfg);
+        console.log('[RadioScribe] ☁️ Config carregada automaticamente do Gist');
+        return true;
+    } catch(e) {
+        console.log('[RadioScribe] Gist auto-load falhou:', e.message);
+        return false;
+    }
+}
+
+// ── INIT ──────────────────────────────────────────────
+(async function init() {
+    // 1. Carregar do localStorage (instantâneo, sempre funciona)
+    loadFromLocalStorage();
+    // 2. Tentar banco SQLite (se servidor disponível)
+    await loadFromDB();
+    // 3. Renderizar UI com o que temos
+    refreshAll();
+    // 4. Tentar sincronizar com GitHub em segundo plano
+    //    (não bloqueia a abertura da página)
+    autoLoadFromGithub().then(loaded => {
+        if (loaded) refreshAll();
+    });
+})();
+</script>
+</body>
+</html>
